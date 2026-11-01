@@ -6,13 +6,32 @@
 
 左键拖动平移，单击空白处打开生成菜单，单击气旋查看数据；滚轮／双指缩放。「地图显示类型 → 昼夜」按模拟 UTC 显示晨昏线，白天显示可见光云水，夜间显示模拟热红外。
 
-在此目录中运行：
+### 截图演示
+
+[![全球昼夜云图，金线标出晨昏线](docs/screenshots/day-night.png)](docs/screenshots/day-night.png)
+
+同一模拟时刻、同一视角：左图显示西北太平洋示例气旋的**云水和风圈**，右图切换为 **RBTOP 增强红外**。颜色反映模拟亮温，不代表风速。三图均为简洁版实截，非实况卫星图；点击图片可看原图。
+
+| 云水与风圈 | RBTOP 红外 |
+| :--: | :--: |
+| [![气旋近景和各级风圈](docs/screenshots/cyclone.png)](docs/screenshots/cyclone.png) | [![同一气旋的模拟红外亮温](docs/screenshots/infrared.png)](docs/screenshots/infrared.png) |
+
+### 一键启动
+
+先克隆仓库或下载 ZIP **并完整解压**。需要 Python 3.8 或更新版本，无需安装第三方包。
+
+| 系统 | 启动方式 |
+| --- | --- |
+| macOS | 双击 [Start-macOS.command](Start-macOS.command)，或在仓库目录执行 `sh Start-macOS.command`。 |
+| Windows | 双击 [Start-Windows.cmd](Start-Windows.cmd)。 |
+
+启动后自动打开默认浏览器，只监听 `127.0.0.1`。默认端口为 8786；如已占用，终端会显示新端口。按 **Ctrl+C** 停止。手动启动：
 
 ```sh
-python3 -m http.server 8786 --bind 127.0.0.1 --directory dist
+python3 tools/serve.py
 ```
 
-浏览器打开 http://127.0.0.1:8786/ 。也可以将 `dist/` 部署到静态服务器。请不要直接双击 HTML：浏览器需要通过 HTTP 加载模块和 Worker。
+只启动服务而不打开浏览器时，加 `--no-browser`。也可以将 `dist/` 部署到静态服务器。请不要直接双击 HTML：浏览器需要通过 HTTP 加载模块和 Worker。
 
 ### 开发
 
