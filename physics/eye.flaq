@@ -1,0 +1,23 @@
+// Parameterized potential for an open, visible eye; not a wind category.
+func eyeRamp(lo: Double, hi: Double, value: Double) -> Double {
+  let t = min(1,max(0,(value-lo)/(hi-lo)))
+  return t*t*(3-2*t)
+}
+func eyeTarget(wind: Double, warm: Double, organization: Double, shear: Double, humidity: Double, symmetry: Double, cover: Double, dry: Double, tropical: Double, replacement: Double, trend: Double, existing: Double) -> Double {
+  let wall = eyeRamp(0.42,0.90,symmetry)
+  let clear = 1-eyeRamp(0.25,1.65,cover)
+  let thermal = eyeRamp(0.23,0.65,warm)*eyeRamp(0.45,0.75,organization)
+  let environment = (1-eyeRamp(8,23,shear))*eyeRamp(55,85,humidity)*(1-0.65*dry)
+  // A ragged opening is possible early. A *new clear* eye in the 80–90 kt
+  // band needs sustained strengthening; an established eye has memory.
+  let early = eyeRamp(36,48,wind)*(0.16+0.84*max(eyeRamp(12,35,trend),eyeRamp(0.4,0.8,existing)))
+  let intensity = max(early,eyeRamp(45,55,wind))
+  return intensity*thermal*environment*wall*clear*tropical*replacement
+}
+
+// Six-hour filtered observed tendency, expressed as a kt/day-equivalent
+// rate; not a prediction or a measured 24-hour intensity change.
+func eyeTrend(previous: Double, change: Double, dt: Double) -> Double {
+  let ktPerDay = change * (3600 / 1852) * 24 / max(0.000001,dt)
+  return previous + (ktPerDay-previous)*(1-exp(-dt/6))
+}

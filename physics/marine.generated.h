@@ -1,0 +1,12 @@
+#include <stdint.h>
+#ifndef FLAQ_REAL_HELPERS
+#define FLAQ_REAL_HELPERS
+static inline double flaq_real_min(double a,double b){return a<b?a:b;}
+static inline double flaq_real_max(double a,double b){return a>b?a:b;}
+static inline double flaq_real_abs(double a){return a<0?-a:a;}
+#endif
+static inline double flaq_vaporSupply(double arg_surfaceSaturation, double arg_vapor, double arg_wind, double arg_wet, double arg_ocean) { double arg_speed = flaq_real_min(180.0, flaq_real_max(0.0, arg_wind)); double arg_deficit = flaq_real_max(0.0, ((0.98 * arg_surfaceSaturation) - arg_vapor)); double arg_background = (arg_deficit * (0.008 + (arg_speed * 0.00055))); double arg_recovery = ((flaq_real_max(0.0, (arg_deficit - (0.22 * arg_surfaceSaturation))) * flaq_real_max(0.0, (arg_speed - 25.0))) / 900.0); return (arg_wet * (arg_background + (arg_ocean * arg_recovery))); }
+static inline double flaq_rainbandExchange(double arg_weight, double arg_direction, double arg_shear, double arg_reach, double arg_taper, double arg_eye, double arg_distance, double arg_rmw) {  return (((((((flaq_real_max(0.0, (-arg_direction)) * arg_weight) * arg_shear) * 3.6) / flaq_real_max(80.0, (arg_reach * 0.55))) * arg_taper) * (1.0 - arg_eye)) * flaq_real_min(1.0, (arg_distance / arg_rmw))); }
+static inline double flaq_marineTarget(double arg_vapor, double arg_water, double arg_saturation, double arg_activity, double arg_descent) { double arg_span = flaq_real_max(0.001, ((arg_saturation * (0.035 + (0.105 * arg_activity))) / (1.0 + (8.0 * flaq_real_max(0.0, arg_descent))))); double arg_excess = ((arg_vapor + arg_water) - arg_saturation); double arg_partial = flaq_real_max(0.0, (arg_span - flaq_real_abs(arg_excess))); return (flaq_real_max(0.0, arg_excess) + ((arg_partial * arg_partial) / (4.0 * arg_span))); }
+static inline double flaq_condensation(double arg_vapor, double arg_resolved, double arg_water, double arg_target, double arg_rate) {  return (flaq_real_min(arg_vapor, flaq_real_max(arg_resolved, (arg_target - arg_water))) * arg_rate); }
+static inline double flaq_reevaporation(double arg_water, double arg_vapor, double arg_saturation, double arg_target, double arg_descent, double arg_hours) {  return flaq_real_min(arg_water, (flaq_real_min(flaq_real_max(0.0, (arg_water - arg_target)), ((flaq_real_max(0.0, (arg_saturation - arg_vapor)) * 0.09) * arg_hours)) + ((arg_descent * arg_water) * arg_hours))); }

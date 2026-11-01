@@ -1,0 +1,40 @@
+{
+  "width": 512,
+  "height": 768,
+  "zoom": 7,
+  "tileX": 106,
+  "tileY": 54,
+  "format": "int16-le metres",
+  "projection": "EPSG:3857",
+  "source": "https://registry.opendata.aws/terrain-tiles/",
+  "attribution": "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+  "accessed": "2026-10-31",
+  "sha256": "1bb7c45faf7f266eec1a8f5b65b0e587c79438bcd1ad4d6cea0d49bc81c05b89",
+  "tiles": [
+    {
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/7/106/54.png",
+      "sha256": "2a7c76cf829b99bacdca949bd95e4e43384ef1e5786cf1335d44debd77c4a5e6"
+    },
+    {
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/7/107/54.png",
+      "sha256": "c1018a726d7f7d6c283a05873634defd7317fcc7deb21b24c325508283a4d9c5"
+    },
+    {
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/7/106/55.png",
+      "sha256": "536262aaf81038d44b8cf851038a99da68c4ea59286b150145199deea713a1ba"
+    },
+    {
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/7/107/55.png",
+      "sha256": "a03a8195e9790377ea90463a904773111a02a74f49c3ab53af6280cd453fa488"
+    },
+    {
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/7/106/56.png",
+      "sha256": "8b034da98faee2b8e59d9422f1114a3fbdc1fd9c8ad0a06c21763990195c0e1b"
+    },
+    {
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/7/107/56.png",
+      "sha256": "c2ad2a996622a6899b172fb07ee10e0c8c6035e7a3289bf6b3b79ee4cdb94464"
+    }
+  ],
+  "limitations": "Approximately 1.1 km near Taiwan. Regional topographic forcing, not summit-scale or 3-D flow resolution."
+}

@@ -1,0 +1,18 @@
+// Knaff & Zehr wind-pressure regression; this sea-level pressure diagnostic
+// is ported from the web model. One-minute wind in m/s, motion in km/h.
+func deficit(speed: Double, latitude: Double, u: Double, v: Double, radius: Double, rmw: Double, transition: Double) -> Double {
+  let wind = max(0,speed) * (3600 / 1852)
+  let lat = min(55,abs(latitude))
+  let relative = max(0,wind - 1.5 * pow(hypot(u,v) / 1.852,0.63))
+  let cr = max(8,66.785 - 0.09102 * wind + 1.0619 * (lat - 25))
+  let exponent = max(0.15,0.1147 + 0.0055 * wind - 0.001 * (lat - 25))
+  let normal = max(0.1,wind * pow(cr / 500,exponent))
+  let size = max(30,radius)
+  let v500 = wind * pow(min(1,rmw / 500),0.65) * exp(-250000 / (2 * size * size))
+  let rel = relative / 24.254
+  let mature = max(0,-23.286 + 0.483 * relative + rel * rel + 12.587 * min(2,max(0.1,v500 / normal)) + 0.483 * lat)
+  let weak = 0.013 * pow(max(0,speed) * 3.6,1.55)
+  let x = min(1,max(0,(wind - 30) / 34))
+  let tropical = x * x * (3 - 2 * x) * (1 - min(1,max(0,transition)))
+  return weak + (mature - weak) * tropical
+}

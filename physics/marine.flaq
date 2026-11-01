@@ -1,0 +1,35 @@
+// Bulk surface exchange into the inflowing marine mixed layer. The baseline
+// handles light winds and soil; above 25 km/h, extra ocean exchange acts on
+// the near-surface layer rather than diluting it over the whole cloud column.
+// Effective extra C_E / depth = 0.001 / 900 m, an idealized model closure.
+func vaporSupply(surfaceSaturation: Double, vapor: Double, wind: Double, wet: Double, ocean: Double) -> Double {
+  let speed = min(180,max(0,wind))
+  let deficit = max(0,0.98 * surfaceSaturation - vapor)
+  let background = deficit * (0.008 + speed * 0.00055)
+  // Recovery of a *dry intrusion*, not a stronger moisture pump everywhere.
+  // The deeper bulk column handles the last 22% of sea/air disequilibrium.
+  let recovery = max(0,deficit - 0.22 * surfaceSaturation) * max(0,speed - 25) / 900
+  return wet * (background + ocean * recovery)
+}
+
+// Per-hour exchange between the upshear rainbands and environmental air.
+func rainbandExchange(weight: Double, direction: Double, shear: Double, reach: Double, taper: Double, eye: Double, distance: Double, rmw: Double) -> Double {
+  return max(0,-direction)*weight*shear*3.6/max(80,reach*0.55)*taper*(1-eye)*min(1,distance/rmw)
+}
+
+// Expected liquid excess for a uniform unresolved distribution of total
+// water about the cell mean. All humidities are g/kg, not alpha values.
+func marineTarget(vapor: Double, water: Double, saturation: Double, activity: Double, descent: Double) -> Double {
+  let span = max(0.001, saturation * (0.035 + 0.105 * activity) / (1 + 8 * max(0, descent)))
+  let excess = vapor + water - saturation
+  let partial = max(0, span - abs(excess))
+  return max(0, excess) + partial * partial / (4 * span)
+}
+
+func condensation(vapor: Double, resolved: Double, water: Double, target: Double, rate: Double) -> Double {
+  return min(vapor, max(resolved, target - water)) * rate
+}
+
+func reevaporation(water: Double, vapor: Double, saturation: Double, target: Double, descent: Double, hours: Double) -> Double {
+  return min(water, min(max(0, water - target), max(0, saturation - vapor) * 0.09 * hours) + descent * water * hours)
+}

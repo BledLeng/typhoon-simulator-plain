@@ -1,0 +1,7 @@
+{
+  "name": "typhoon-simulator-plain",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": { "test": "node --test tests/*.test.mjs" }
+}
