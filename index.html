@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#8bc4e6">
+  <meta name="description" content="全球气旋教育模拟：连续水汽云水场、地形影响、地中海类热带气旋与全球海盆；非实况或气象预报。">
+  <title>台风模拟器 · 简洁版</title>
+  <link rel="modulepreload" href="./satellite-scales.js?v=global-39">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="map-shell" aria-label="全球气旋地图">
+    <canvas id="map" tabindex="0" aria-label="地图。左键拖动平移，单击空白处打开生成菜单，点击气旋只查看数据，Shift 开始手动干预，Escape 结束干预。方向键移动，加减键缩放，Enter 在视野中心生成或查看。"></canvas>
+    <div class="simulation-clock" aria-label="模拟时间控制">
+      <button id="pause" aria-label="暂停模拟" title="暂停或继续"><svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg></button>
+      <div><output id="sim-time">第 1 天 · 00:00</output><small><span id="actual-rate">实际 0.0h/s</span> · 非气象预报</small></div>
+      <button id="time-rate" aria-label="模拟时间倍率" title="目标速度：1 / 3 / 6 / 12 / 24h/s；高负载时自动回压，保持云场同步">1h/s</button>
+    </div>
+
+    <div class="map-state" id="status" role="status">正在加载海岸线…</div>
+    <button id="retry" class="retry" hidden>重新加载</button>
+
+    <aside class="map-tools" aria-label="地图工具">
+      <button id="zoom-in" aria-label="放大地图" title="放大（+）"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button id="zoom-out" aria-label="缩小地图" title="缩小（−）"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+      <span class="tool-separator" aria-hidden="true"></span>
+      <button id="reset" aria-label="恢复全球全览" title="全球全览（Home）"><svg viewBox="0 0 24 24"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M9 12h6m-3-3v6"/></svg></button>
+      <button id="grid-toggle" aria-label="显示或隐藏经纬网" aria-pressed="true" title="经纬网"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9.5 4v16M14.5 4v16M4 9.5h16M4 14.5h16"/></svg></button>
+      <button id="layer-toggle" aria-label="地图显示类型" aria-haspopup="menu" aria-expanded="false" title="地图显示类型"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5ZM3 12l9 5 9-5M3 16l9 5 9-5"/></svg></button>
+      <button id="environment-toggle" aria-label="环境数值" aria-pressed="false" title="环境数值"><svg viewBox="0 0 24 24"><path d="M12 3v10m-3-7V5a3 3 0 0 1 6 0v9a5 5 0 1 1-6 0V9"/><circle cx="12" cy="17" r="1.5"/></svg></button>
+      <button id="wind-rings" aria-label="环流范围及七级十级十二级模拟风圈" aria-pressed="true" title="蓝色虚线：环流范围；实线：七级 / 十级 / 十二级风圈"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button id="ranking-toggle" aria-label="气旋排行榜" aria-expanded="false" title="排行榜"><svg viewBox="0 0 24 24"><path d="M8 20V10h8v10M3 20v-6h5m8-8h5v14M3 20h18M10 5l2-2 2 2"/></svg></button>
+    </aside>
+
+    <nav class="environment-launcher" aria-label="独立环境控制">
+      <button id="environment-edit-toggle" aria-label="环境设置" aria-pressed="false">环境设置</button>
+      <button id="genesis-rate">生成概率 1×</button>
+    </nav>
+
+    <section id="environment-editor" aria-label="环境自定义" hidden></section>
+    <dialog id="ranking-panel" aria-labelledby="ranking-title">
+      <div class="ranking-content">
+        <header><div><p class="ranking-eyebrow">本次模拟 · 已结束的生命周期</p><h1 id="ranking-title">气旋排行榜</h1></div><button id="ranking-close" aria-label="关闭排行榜"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+        <p class="ranking-note">按巅峰风速排序，同风速比较最低气压。仅收录已结束的气旋。全部采用 1 分钟模拟风速；印度洋、澳洲及南太平洋等级为模拟映射，非当地 3 / 10 分钟官方定级；台风高等级与地中海等级为自定义。</p>
+        <div id="ranking-rows" aria-live="polite"></div>
+      </div>
+    </dialog>
+
+    <section id="environment-panel" class="environment-panel" aria-label="环境与选中风暴" hidden>
+      <div class="inspector-content">
+      <div class="panel-title"><strong id="system-title">环境</strong><button id="close-panel" aria-label="收起环境">×</button></div>
+      <p id="system-summary">点击环流查看数据；按 Shift 关闭菜单并开始方向干预。</p>
+      <dl id="environment-values"></dl>
+      <div class="environment-options"><button id="weather-layer" aria-haspopup="menu" aria-expanded="false">图层：云水 ▾</button></div>
+      <p id="cloud-product-legend" hidden></p>
+      <p id="wind-radii"></p>
+      <button id="release-storm" hidden>结束方向干预 <span>Esc</span></button>
+      <small id="seed-info"></small>
+      </div>
+    </section>
+    <output id="selected-status" aria-label="选中气旋状态" hidden></output>
+    <div id="notification" role="status" hidden></div>
+    <div id="spawn-menu" role="group" aria-label="生成天气系统" hidden>
+      <div class="menu-content">
+        <div class="spawn-size">
+          <div class="spawn-heading"><label for="spawn-radius">初始环流半径</label><output id="spawn-radius-value" for="spawn-radius">300 km</output><button type="button" id="random-radius" aria-pressed="false" aria-label="随机初始环流半径">随机</button></div>
+          <input id="spawn-radius" type="range" min="0" max="1" step="0.001" aria-label="初始环流半径">
+          <small>随机 70–800 km · 手动 70–2600 km · 生成后随环境演变</small>
+        </div>
+        <button role="menuitem" data-spawn="low"><svg viewBox="0 0 24 24"><path d="M7 4v16h12"/></svg><span>强制生成低压</span></button>
+        <button role="menuitem" data-spawn="disturbance"><svg viewBox="0 0 24 24"><path d="M19 5a8 8 0 0 0-13 4 6 6 0 0 1 11 6M5 19a8 8 0 0 0 13-4A6 6 0 0 1 7 9"/><circle cx="12" cy="12" r="2.5"/></svg><span>生成热带扰动</span></button>
+        <button role="menuitem" data-spawn="subtropical"><svg viewBox="0 0 24 24"><path d="M20 8A9 9 0 0 0 4 15m1 4a9 9 0 0 0 15-7M8 10a5 5 0 0 1 8 5"/></svg><span>生成亚热带气旋</span></button>
+        <button role="menuitem" data-spawn="cloud"><svg viewBox="0 0 24 24"><path d="M6 18a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 1 1 2 10Z"/></svg><span>生成云团</span></button>
+        <button role="menuitem" data-spawn="extratropical"><svg viewBox="0 0 24 24"><path d="M6 5v14h12M3 9h3m12 5h3"/></svg><span>生成温带气旋</span></button>
+        <button role="menuitem" data-spawn="anticyclone"><svg viewBox="0 0 24 24"><path d="M6 5v14M18 5v14M6 12h12"/></svg><span>生成反气旋</span></button>
+      </div>
+    </div>
+    <div id="layer-menu" role="menu" aria-label="地图显示类型" hidden><div class="menu-content"></div></div>
+
+    <aside id="satellite-scale" aria-label="模拟云图色标" hidden><strong></strong><canvas width="261" height="1" aria-hidden="true"></canvas><small><span></span><span></span><span></span></small></aside>
+    <footer class="map-footer">
+      <div class="map-key"><span id="system-count">随机环境</span></div>
+      <output id="coordinates" aria-label="光标经纬度">135.00°E · 25.00°N</output>
+      <a href="./credits.html" target="_blank" rel="noopener">数据与许可</a>
+    </footer>
+  </main>
+  <script type="module" src="./app.js?v=global-39"></script>
+</body>
+</html>

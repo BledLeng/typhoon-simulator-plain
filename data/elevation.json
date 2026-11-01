@@ -1,0 +1,10 @@
+{
+  "size": 2048,
+  "format": "int16-le metres",
+  "projection": "EPSG:3857",
+  "zoom": 3,
+  "source": "https://registry.opendata.aws/terrain-tiles/",
+  "attribution": "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+  "sha256": "bf2817541ed4bf136b0481798d6b460d407b0593424451b74bf08de84476ecf6",
+  "limitations": "Approx. 20 km at equator; regional barriers only. Below 85°S / above 85°N not resolved."
+}
