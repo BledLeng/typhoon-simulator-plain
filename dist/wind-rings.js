@@ -1,4 +1,4 @@
-import { destination, windRadii } from './simulation.js';
+import { destination, windRadii } from './simulation.js?v=eye-42';
 import { terrainCirculationRadius } from './terrain-interaction.js';
 
 // The model's outer circulation scale is NOT a fixed wind-speed threshold.

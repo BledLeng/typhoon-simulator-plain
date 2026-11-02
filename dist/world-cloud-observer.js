@@ -1,9 +1,9 @@
 // One global satellite observation mesh, including clear air. A cyclone can
 // force wind/ascent in this mesh, but it cannot supply an image or erase a tile.
-import {radiusOfMaximumWind} from './simulation.js';
+import {radiusOfMaximumWind} from './simulation.js?v=eye-42';
 import {scaleRGBA} from './satellite-scales.js?v=global-39';
 import {solarPosition,TWILIGHT_SINE} from './day-night.js?v=global-39';
-import {random} from './simulation.js';
+import {random} from './simulation.js?v=eye-42';
 
 const vertex=`#version 300 es
 out vec2 uv;
@@ -79,6 +79,8 @@ void main(){
 const vortex=head+`
 uniform vec4 host; // continuous centre, circulation radius km, RMW km
 uniform vec4 state; // wind km/h, signed rotation, organization, eye ventilation
+uniform vec4 walls; // band amplitude, phase, secondary radius / RMW, outer strength
+uniform float innerWall;
 uniform sampler2D columns;
 uniform vec4 footprint;
 uniform int deviations;
@@ -96,7 +98,15 @@ void main(){
  float fineWater=0.;
  vec2 location=vec2(fract(uv.x),uv.y);
  vec4 ambient=texture(field,location),motion=texture(wind,location);
- float ascent=.0032*v*state.z*exp(-pow((r-rm)/(1.35*rm),2.))
+ float q=r/rm,band=0.;
+ if(walls.x>.01 && q>.38 && q<2.7){
+   float a=walls.y-state.y*4.4*log(q);
+   band=walls.x*smoothstep(.38,.72,q)*(1.-smoothstep(1.75,2.7,q))*dot(unit,vec2(cos(a),sin(a)));
+ }
+ float z=(q-1.)/1.35;
+ float profile=exp(-z*z)*innerWall*(1.+.88*band)+.55*max(0.,band);
+ if(walls.w>0. && walls.z>0.){float b=(q-walls.z)/(.32*walls.z);profile+=walls.w*exp(-b*b);}
+ float ascent=.0032*v*state.z*profile
      *smoothstep(.55,1.,motion.z)*smoothstep(17.,29.,ambient.a);
  if(footprint.z>0.){
    vec2 q=vec2(fract(uv.x-footprint.x+.5)-.5,uv.y-footprint.y)/footprint.zw+.5;
@@ -118,7 +128,7 @@ void main(){
      ascent+=max(0.,column.x-ambient.r)*.42*(1.-smoothstep(.65,1.,edge))*taper;
    }
  }
- float drying=state.w*1.15*exp(-pow(r/max(5.,rm*.80),2.));
+ float drying=state.w*(1.-.7*max(0.,band))*1.15*exp(-pow(r/max(5.,rm*.80),2.));
  outp=deviations==1?vec4(fineWater,0.,0.,1.):vec4(vel,ascent,drying);
 }`;
 const display=head+`
@@ -195,6 +205,7 @@ export class WorldCloudObserver {
      gl.useProgram(p);for(const [i,name] of ['field','wind','history','noiseMap','forces','palette','previousField','columns'].entries())gl.uniform1i(u[name],i);
      for(const [name,unit] of [['prediction',8],['deviationsMap',9]]){u[name]=gl.getUniformLocation(p,name);gl.uniform1i(u[name],unit);}
      u.deviations=gl.getUniformLocation(p,'deviations');
+     u.walls=gl.getUniformLocation(p,'walls');u.innerWall=gl.getUniformLocation(p,'innerWall');
      u.solar=gl.getUniformLocation(p,'solar');
      gl.uniform1f(u.worldTop,f.top);gl.uniform1f(u.worldSpan,f.bottom-f.top);
      gl.uniform2f(u.metric,2*Math.PI*6371,(f.bottom-f.top)*6371);
@@ -255,6 +266,9 @@ export class WorldCloudObserver {
        g.texSubImage2D(g.TEXTURE_2D,0,0,0,nest.width,nest.height,g.RED,g.FLOAT,nest.water);
      }else g.uniform4f(v.footprint,0,0,0,0);
      g.uniform4f(v.host,x,y,r,rm);g.uniform4f(v.state,s.wind*3.6,Math.sign(s.lat)||1,s.organization||0,s.eye||0);
+     const c=s.eyewallCycle;
+     g.uniform4f(v.walls,s.eyeBand||0,s.rotation||0,(c?.radius||0)/rm,c?.strength||0);
+     g.uniform1f(v.innerWall,c?.inner??1);
      for(const shift of [0,...(x<rx?[1]:x>1-rx?[-1]:[])]){
        // The full-screen triangle would extend beyond a subrect; contributions
        // are exactly zero outside the physical radius in the fragment shader.

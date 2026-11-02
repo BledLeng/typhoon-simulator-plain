@@ -1,6 +1,6 @@
 import {bindMarkup, say, t} from './i18n.js';
 import { ENV_CONTROLS, ENV_EVENTS, setEnvironmentValue, startEnvironmentEvent } from './environment-config.js?v=global-39';
-import { environment } from './simulation.js?v=global-39';
+import { environment } from './simulation.js?v=eye-42';
 
 const groups = ['基础', '环流', '事件'];
 const eventControls = [

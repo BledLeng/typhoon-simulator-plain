@@ -1,4 +1,5 @@
-import { random, clamp, smooth, sampleEnvironment, radiusOfMaximumWind } from './simulation.js?v=global-39';
+import { random, clamp, smooth, sampleEnvironment, radiusOfMaximumWind } from './simulation.js?v=eye-42';
+import { bandAnomaly } from './eye-morphology.js?v=eye-42';
 import { project, unproject } from './map-math.js';
 import { WORLD, longitudeDelta, isMediterranean } from './geography.js';
 import { terrainWindFactor, terrainCirculationRadius } from './terrain-interaction.js';
@@ -370,6 +371,8 @@ export class MoistAtmosphere {
         * (1 - smooth(.15,.7,s.dryIntrusion || 0)) * inner * (1 - hybrid);
       const coreDescent = Math.max(s.eye || 0,wallDescent) * (1-transition);
       const wallClosure = smooth(.08,.65,coreDescent);
+      const band = !anti && !extra ? s.eyeBand || 0 : 0, angle = s.rotation || 0;
+      const moatContrast = outer ? smooth(.12, .85, (cycle.radius - rmw) / rmw) : 0;
       this.forStorm(s, Math.min(s.customRadius ? 6500 : 1500, s.radius * 2.5), (i, dx, dy, r) => {
         // The centre has no tangential direction, but must still subside.
         r = Math.max(.01,r);
@@ -383,7 +386,9 @@ export class MoistAtmosphere {
         const tangential = s.wind * 3.6 * Math.max(primary * (.65 + .35 * inner), secondary * outer * .9) * taper * terrainFactor;
         // Mature eyewall convergence must not continue unchanged into the eye:
         // that used to lift/condense the centre faster than subsidence cleared it.
-        const eyeInterior = !anti ? coreDescent * (1 - smooth(rmw * .35, rmw, r)) : 0;
+        const lane = band > .01 ? bandAnomaly(r / rmw, dx / r, dy / r, angle, sign, band) : 0;
+        const vent = 1 - .7 * Math.max(0, lane);
+        const eyeInterior = !anti ? coreDescent * (1 - smooth(rmw * .35, rmw, r)) * vent : 0;
         const inflow = tangential * .13 * s.organization * (1 - eyeInterior) * (anti ? -1 : 1);
         this.u[i] += (-sign * dy * tangential - dx * inflow) / r + driftU * taper;
         this.v[i] += (sign * dx * tangential - dy * inflow) / r + driftV * taper;
@@ -429,14 +434,15 @@ export class MoistAtmosphere {
         // cores. A dry, moderate storm must not be forced into a uniform torus.
         const coreWidth = rmw * (.85 - .35 * coherence);
         const ascentCenter = localCore * (.55 + .45 * wallClosure);
-        const coreLift = s.organization * terrainFactor * terrainFactor * ((.22 + .2 * coherence) * inner * Math.exp(-(((r - ascentCenter) / coreWidth) ** 2))
+        const coreLift = s.organization * terrainFactor * terrainFactor * ((.22 + .2 * coherence) * inner * (1 + .88 * lane) * Math.exp(-(((r - ascentCenter) / coreWidth) ** 2))
+          + .25 * Math.max(0, lane)
           + .44 * outer * secondary
           + .12 * (1 - eyeInterior) * Math.exp(-r / Math.max(80, s.radius * .8)));
         this.lift[i] += frontal * convectionSector * coreLift;
         // An interrupted sector cannot keep the undamaged eye's prescribed
         // clearing/downward return circulation. Condensate still evolves in
         // step(); no mountain mask is ever applied to rendered cloud alpha.
-        const eyeSink = coreDescent * terrainFactor * (1.4 + .8 * wallDescent)
+        const eyeSink = coreDescent * vent * terrainFactor * (1.4 + .8 * wallDescent)
           * Math.exp(-((r / (rmw * (.55 + .16 * wallDescent))) ** 2));
         this.sink[i] += eyeSink;
         // Compensating descent outside organized convection. Weak lows do not
@@ -454,7 +460,7 @@ export class MoistAtmosphere {
         }
         if (outer) {
           const moat = (rmw + cycle.radius) * .5, width = Math.max(8, (cycle.radius - rmw) * .25);
-          const moatSink = outer * .35 * Math.exp(-(((r - moat) / width) ** 2));
+          const moatSink = outer * moatContrast * .35 * Math.exp(-(((r - moat) / width) ** 2));
           this.sink[i] += moatSink;
           if (geometry) geometry.sink[i] += moatSink;
         }

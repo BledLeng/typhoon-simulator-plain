@@ -1,11 +1,11 @@
-import { MoistAtmosphere } from './cloud-field.js?v=global-39';
-import { CloudDetails } from './cloud-detail.js?v=global-39';
+import { MoistAtmosphere } from './cloud-field.js?v=eye-42';
+import { CloudDetails } from './cloud-detail.js?v=eye-42';
 import { CLOUD_STEP_HOURS as STEP_HOURS } from './cloud-clock.js';
 import { isCloudProduct } from './cloud-products.js?v=global-39';
 import { pressureRange } from './pressure-field.js';
 import { loadCloudKernel } from './moist-kernel-v2.js';
-import { WorldCloudObserver } from './world-cloud-observer.js?v=global-39';
-import { CpuWorldObserver } from './world-cloud-reference.js?v=global-39';
+import { WorldCloudObserver } from './world-cloud-observer.js?v=eye-42';
+import { CpuWorldObserver } from './world-cloud-reference.js?v=eye-42';
 import { queueWorkerMessages } from './worker-queue.js?v=global-39';
 let field, details, observer, lastCandidates = -Infinity;
 function receive({ data }) {

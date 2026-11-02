@@ -1,6 +1,6 @@
 import {initLanguage,t} from './i18n.js';
 import { REGION, clamp, project, unproject, fitRegion, worldAt, zoomAt, formatCoordinate, constrainView, normalizeLongitude, traceLandRing } from './map-math.js';
-import { WeatherSandbox } from './weather.js?v=plain-40';
+import { WeatherSandbox } from './weather.js?v=eye-42';
 import { Terrain } from './terrain.js';
 import { TerrainRaster } from './terrain-raster.js';
 import { LandIndex } from './land-index.js';

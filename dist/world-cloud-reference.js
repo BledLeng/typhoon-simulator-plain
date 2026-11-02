@@ -1,8 +1,9 @@
 // Portable, uniform-grid observer for browsers without half-float render
 // targets. No dependence on DOM, camera, selected storm or fine-mesh windows.
-import {MoistAtmosphere} from './cloud-field.js?v=global-39';
-import {radiusOfMaximumWind, smooth} from './simulation.js';
+import {MoistAtmosphere} from './cloud-field.js?v=eye-42';
+import {radiusOfMaximumWind, smooth} from './simulation.js?v=eye-42';
 import {unproject} from './map-math.js';
+import {bandAnomaly} from './eye-morphology.js?v=eye-42';
 import {longitudeNoiseAxis,addNoiseRow} from './noise-grid.js';
 const clip=(x,a,b)=>Math.max(a,Math.min(b,x));
 const mix=(v,i,j,k,l,a,b,c,d)=>a*v[i]+b*v[j]+c*v[k]+d*v[l];
@@ -45,21 +46,27 @@ export class CpuWorldObserver{
      const rm=radiusOfMaximumWind(s),R=Math.max(2.5*rm,Math.min(s.radius*1.45,nest?950:5*rm)),p=f.point(s.lon,s.lat);
      const cx=(p.x+.5)*this.factor-.5,cy=(p.y+.5)*this.factor-.5;
      const row=clip(Math.round(cy),0,h-1),kx=v.kmx[row],ky=v.kmy[row],rx=Math.min(w/2,R/kx);
+     const c=s.eyewallCycle, inner=c?.inner??1, outer=c?.strength||0, radius=c?.radius||0;
+     const spin=Math.sign(s.lat)||1, angle=s.rotation||0, amplitude=s.eyeBand||0;
      for(let y=Math.max(0,Math.floor(cy-R/ky));y<=Math.min(h-1,Math.ceil(cy+R/ky));y++)for(let x=Math.ceil(cx-rx);x<=Math.floor(cx+rx);x++){
        const i=y*w+((x%w+w)%w),dx=(x-cx)*kx,dy=(cy-y)*ky,r=Math.hypot(dx,dy);
        if(r>=R||r<.01)continue;
-       const tx=dx/r,ty=dy/r,spin=Math.sign(s.lat)||1,Vel=s.wind*3.6*Math.min(r/rm,(rm/Math.max(r,rm))**.64)*(1-smooth(.55*R,R,r));
+       const tx=dx/r,ty=dy/r,Vel=s.wind*3.6*Math.min(r/rm,(rm/Math.max(r,rm))**.64)*(1-smooth(.55*R,R,r));
        const gain=Vel*(1-smooth(.6*rm,Math.max(2*rm,120),r));
        u[i]+=gain*(-ty*spin-.15*tx);north[i]+=gain*(tx*spin-.15*ty);
        const px=(x+.5)/this.factor-.5,py=(y+.5)/this.factor-.5;
        const rh=f.sample(f.vapor,px,py)/(3.8*Math.exp(.059*f.sample(f.temperature,px,py)));
-       rise[i]+=.0032*Vel*(s.organization||0)*Math.exp(-(((r-rm)/(1.35*rm))**2))*smooth(.55,1,rh)*smooth(17,29,f.sample(f.envFields.sst,px,py));
+       const band=amplitude>.01?bandAnomaly(r/rm,tx,ty,angle,spin,amplitude):0;
+       const primary=Math.exp(-(((r-rm)/(1.35*rm))**2));
+       const secondary=outer>0 && radius>0 ? outer*Math.exp(-(((r-radius)/(.32*radius))**2)) : 0;
+       const ascent=primary*inner*(1+.88*band)+.55*Math.max(0,band)+secondary;
+       rise[i]+=.0032*Vel*(s.organization||0)*ascent*smooth(.55,1,rh)*smooth(17,29,f.sample(f.envFields.sst,px,py));
        if(nest){
          const n=nest.point(this.lons[((x%w+w)%w)],v.lat[y]);
          const edge=Math.max(Math.abs((n.x+.5)/nest.width-.5),Math.abs((n.y+.5)/nest.height-.5))*2;
          if(edge<1)rise[i]+=.42*Math.max(0,nest.sample(nest.water,n.x,n.y)-f.sample(f.water,px,py))*(1-smooth(.65,1,edge))*(1-smooth(.55*R,R,r));
        }
-       dry[i]+=(s.eye||0)*1.15*Math.exp(-((r/Math.max(5,rm*.80))**2));
+       dry[i]+=(s.eye||0)*(1-.7*Math.max(0,band))*1.15*Math.exp(-((r/Math.max(5,rm*.80))**2));
      }
    }
  }

@@ -1,5 +1,5 @@
-import { MoistAtmosphere } from './cloud-field.js?v=global-39';
-import { clamp, radiusOfMaximumWind } from './simulation.js';
+import { MoistAtmosphere } from './cloud-field.js?v=eye-42';
+import { clamp, radiusOfMaximumWind } from './simulation.js?v=eye-42';
 import { longitudeDelta } from './geography.js';
 import { project, unproject } from './map-math.js';
 

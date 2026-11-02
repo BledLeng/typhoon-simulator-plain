@@ -1,6 +1,7 @@
 // An educational, reduced-order cyclone model. Units: km, hours, m/s, °C, hPa.
 // This is not a numerical weather prediction or a source of real forecasts.
 import { Ocean } from './ocean.js';
+import { evolveBanding } from './eye-morphology.js?v=eye-42';
 import { monthlyClimate } from './basin-climate.js';
 import { moistureEnvelope } from './moisture-envelope.js';
 import { StormNames, namingBasin } from './storm-names.js';
@@ -150,8 +151,9 @@ export function evolveDryIntrusion(s, ambient, upstream, dt) {
 // Parameterized secondary-eyewall lifecycle, not a resolved 3-D ERC model.
 // Only sustained organized, moist convection can build an outer eyewall.
 export function evolveEyewalls(s, { support, convection, shear, humidity }, dt) {
+  evolveBanding(s, support, convection, shear, humidity, dt);
   const cycle = s.eyewallCycle ||= { phase: 'none', maturity: 0, strength: 0, radius: 0, inner: 1, cooldown: 0 };
-  if (s.coreRadius) s.coreRadius += (equilibriumCoreRadius(s) - s.coreRadius) * (1 - Math.exp(-dt / 72));
+  if (s.coreRadius && cycle.phase !== 'merging') s.coreRadius += (equilibriumCoreRadius(s) - s.coreRadius) * (1 - Math.exp(-dt / 72));
   cycle.cooldown = Math.max(0, cycle.cooldown - dt);
   const viable = s.kind === 'disturbance' && !s.absorbedBy && (s.dryIntrusion || 0) < .55 && s.wind > 35 && support > .35
     && convection > .5 && shear < 15 && humidity > 65;
@@ -167,7 +169,21 @@ export function evolveEyewalls(s, { support, convection, shear, humidity }, dt) 
   if (cycle.phase === 'decaying') {
     cycle.strength *= Math.exp(-dt / 6);
     cycle.inner += (1 - cycle.inner) * (1 - Math.exp(-dt / 8));
-    if (cycle.strength < .01) Object.assign(cycle, { phase: 'none', strength: 0, inner: 1, cooldown: 24 });
+    if (cycle.strength < .01) Object.assign(cycle, { phase: 'none', strength: 0, inner: 1, radius: 0, cooldown: 24 });
+    return;
+  }
+  // A coherent inner wall can survive contact. The two maxima approach a
+  // common radius; the outer contribution fades without erasing the inner eye.
+  if (cycle.phase === 'merging') {
+    const toward = -Math.expm1(-dt / 5);
+    s.coreRadius += (cycle.fusedRadius - s.coreRadius) * toward;
+    cycle.radius += (cycle.fusedRadius - cycle.radius) * toward;
+    cycle.inner += (1 - cycle.inner) * toward;
+    cycle.strength *= Math.exp(-dt / 6);
+    if (cycle.strength < .04) {
+      s.eyewallMergers = (s.eyewallMergers || 0) + 1;
+      Object.assign(cycle, { phase: 'none', radius: 0, strength: 0, inner: 1, cooldown: 48 });
+    }
     return;
   }
   cycle.strength += (1 - cycle.strength) * (1 - Math.exp(-dt / 10));
@@ -175,8 +191,17 @@ export function evolveEyewalls(s, { support, convection, shear, humidity }, dt) 
   if (cycle.phase === 'contracting') {
     const rmw = radiusOfMaximumWind(s);
     cycle.radius += (rmw * 1.35 - cycle.radius) * (1 - Math.exp(-dt / 18));
-    cycle.inner += (Math.max(.1, 1 - cycle.strength) - cycle.inner) * (1 - Math.exp(-dt / 8));
-    if (cycle.radius < rmw * 1.7 && cycle.inner < .25) {
+    // Use feedback from the resolved core, not a random draw on every tick.
+    const retention = smooth(.48, .8, s.coreSymmetry ?? 0) * smooth(.38, .75, s.eye)
+      * smooth(.6, .86, convection) * (1 - smooth(6, 15, shear));
+    const retainedWall = cycle.radius < rmw * 1.54 && retention < .56 ? 0 : .88 * retention;
+    cycle.inner += (Math.max(.1, 1 - cycle.strength, retainedWall) - cycle.inner) * (1 - Math.exp(-dt / 8));
+    if (cycle.radius < rmw * 1.8 && cycle.inner > .48 && retention > .48) {
+      cycle.phase = 'merging'; s.coreRadius = rmw;
+      cycle.fusedRadius = rmw + (cycle.radius - rmw) * cycle.strength / (cycle.strength + cycle.inner);
+      return;
+    }
+    if (cycle.radius < rmw * 1.7 && cycle.inner < .45) {
       s.coreRadius = cycle.radius;
       Object.assign(cycle, { phase: 'none', strength: 0, inner: 1, cooldown: 48 });
       s.eyewallReplacements = (s.eyewallReplacements || 0) + 1;
