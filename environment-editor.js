@@ -1,3 +1,4 @@
+import {bindMarkup, say, t} from './i18n.js';
 import { ENV_CONTROLS, ENV_EVENTS, setEnvironmentValue, startEnvironmentEvent } from './environment-config.js?v=global-39';
 import { environment } from './simulation.js?v=global-39';
 
@@ -21,6 +22,7 @@ export class EnvironmentEditor {
       ${i===2 ? `<div class="event-buttons">${Object.entries(ENV_EVENTS).map(([k,label]) => `<button data-event="${k}">${label}</button>`).join('')}</div>
         <p>事件作用于选中的风暴或最近的地图位置，逐渐增强、消退。</p><output id="active-events"></output><button id="clear-events">结束所有事件</button>` : ''}</section>`).join('')}
       <p>生成倍率只调节概率；即便调到 4×，也需要适宜的环境。</p><button id="reset-environment">恢复本次随机环境</button></div>`;
+    bindMarkup(el);
     this.controls = specs.map(spec => [spec, el.querySelector('#env-'+spec.key)]);
     const tabs = [...el.querySelectorAll('[role=tab]')];
     const select = index => {
@@ -51,7 +53,7 @@ export class EnvironmentEditor {
       const ok = startEnvironmentEvent(sim.env, button.dataset.event, sim.hours, {
         intensity:this.eventValues.eventStrength, duration:this.eventValues.eventDuration, lon:point.lon, lat:point.lat,
       });
-      weather.notify(ok ? '已加入'+ENV_EVENTS[button.dataset.event] : '最多同时设置 6 个事件');
+      weather.notify(ok ? say('已加入','Event added: ')+t(ENV_EVENTS[button.dataset.event]) : t('最多同时设置 6 个事件'));
       this.sync(); weather.invalidate();
     });
     el.querySelector('#clear-events').onclick = () => {
@@ -79,12 +81,12 @@ export class EnvironmentEditor {
     this.controls.forEach(([s,input]) => {
       const v = this.eventValues[s.key] ?? env[s.key];
       input.value = v;
-      const text = Number(v.toFixed(2))+s.unit;
+      const text = Number(v.toFixed(2))+t(s.unit);
       input.setAttribute('aria-valuetext',text);
       input.labels[0].querySelector('output').textContent = text;
     });
     this.element.querySelector('#active-events').textContent = (env.events||[]).filter(e => e.start+e.duration>hours)
-      .map(e => `${ENV_EVENTS[e.type]} ${e.intensity}× · 剩余 ${Math.ceil(e.start+e.duration-hours)}h`).join('；') || '暂无事件';
-    document.querySelector('#genesis-rate').textContent = '生成概率 '+env.genesisMultiplier+'×';
+      .map(e => `${t(ENV_EVENTS[e.type])} ${e.intensity}× · ${say("剩余 ","")}${Math.ceil(e.start+e.duration-hours)}${say("h"," h left")}`) .join(say('；','; ')) || t('暂无事件');
+    document.querySelector('#genesis-rate').textContent = say('生成概率 ','Genesis ')+env.genesisMultiplier+'×';
   }
 }

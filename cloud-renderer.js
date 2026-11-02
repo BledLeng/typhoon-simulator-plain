@@ -1,3 +1,4 @@
+import {say,t,stormText} from './i18n.js';
 import { MoistAtmosphere, FIELD_BOUNDS } from './cloud-field.js?v=global-39';
 import { systemLabel, isHighLatitudeSystem, visibleSystem, toKnots, destination } from './simulation.js?v=global-39';
 import { circulationState, polarBoundary } from './circulation.js';
@@ -148,7 +149,7 @@ export class CloudRenderer {
         context.stroke();
         const label = project(0, pole.sign * (pole.latitude + 5));
         context.font = '12px -apple-system, sans-serif'; context.textAlign = 'center'; context.fillStyle = '#605682';
-        context.fillText(`${pole.sign > 0 ? '北' : '南'}极涡 · 高空示意`, label.x, label.y);
+        context.fillText(say(`${pole.sign > 0 ? '北' : '南'}极涡 · 高空示意`, `${pole.sign > 0 ? 'North' : 'South'} polar vortex · upper air`), label.x, label.y);
       }
       context.restore();
     }
@@ -159,7 +160,7 @@ export class CloudRenderer {
       context.fillStyle = '#d84942'; context.strokeStyle = '#fff'; context.lineWidth = 1.5;
       context.beginPath(); context.rect(-6, -6, 12, 12); context.fill(); context.stroke(); context.restore();
       context.fillStyle = '#fff'; context.font = 'bold 10px sans-serif'; context.textAlign = 'center'; context.fillText('!', p.x, p.y + 3);
-      context.fillStyle = '#8b2929'; context.font = '11px sans-serif'; context.fillText(`${trackLabel(hit)} 登陆`, p.x, p.y + 21);
+      context.fillStyle = '#8b2929'; context.font = '11px sans-serif'; context.fillText(`${t(trackLabel(hit))} ${say("登陆","landfall")}`, p.x, p.y + 21);
     }
     for (const s of visible) {
       if (isHighLatitudeSystem(s)) {
@@ -191,9 +192,9 @@ export class CloudRenderer {
       context.font = '600 11px -apple-system, sans-serif';
       context.fillStyle = isInfrared(this.layer) ? '#edf4fa' : '#143b51';
       context.shadowColor = isInfrared(this.layer) ? '#142536' : '#ffffff'; context.shadowBlur = 5;
-      context.fillText(`${trackLabel(s)} · ${systemLabel(s)}`, p.x + 15, p.y - 6);
+      context.fillText(`${t(trackLabel(s))} · ${stormText(systemLabel(s))}`, p.x + 15, p.y - 6);
       context.font = '10px -apple-system, sans-serif';
-      context.fillText(`${Math.round(toKnots(s.wind))} kt${s.absorbedBy ? ' · 正被吞并' : s.fuji > .10 ? ' · 双涡作用' : ''}`, p.x + 15, p.y + 9);
+      context.fillText(`${Math.round(toKnots(s.wind))} kt${s.absorbedBy ? say(' · 正被吞并',' · merging') : s.fuji > .10 ? say(' · 双涡作用',' · binary interaction') : ''}`, p.x + 15, p.y + 9);
       context.shadowBlur = 0;
       if (selected && simulation.heading !== null) {
         context.beginPath(); context.moveTo(p.x + Math.cos(simulation.heading) * 28, p.y - Math.sin(simulation.heading) * 28);
