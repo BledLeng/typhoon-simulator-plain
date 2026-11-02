@@ -1,12 +1,13 @@
 import {bindMarkup, say, t, stormText, eventText} from './i18n.js';
-import { Simulation, systemLabel, regionalGrade, gradeNote, isHighLatitudeSystem, visibleSystem, toKnots, pacificLongitude, windRadii } from './simulation.js?v=global-39';
-import { CloudRenderer } from './cloud-renderer.js?v=plain-40';
+import { Simulation, systemLabel, regionalGrade, gradeNote, isHighLatitudeSystem, visibleSystem, toKnots, pacificLongitude, windRadii } from './simulation.js?v=eye-42';
+import { CloudRenderer } from './cloud-renderer.js?v=eye-42';
 import { formatCoordinate } from './map-math.js';
-import { EnvironmentEditor } from './environment-editor.js?v=plain-40';
+import { eyeStructureDetails } from './eye-morphology.js?v=eye-42';
+import { EnvironmentEditor } from './environment-editor.js?v=eye-42';
 import { PopupMenu } from './popup-menu.js';
 import { MAP_LAYERS, INITIAL_RADIUS, radiusFromPosition, positionFromRadius, spawnOptions, nextTimeRate } from './weather-options.js?v=global-39';
 import { pressureRange } from './pressure-field.js';
-import { circulationRadius } from './wind-rings.js';
+import { circulationRadius } from './wind-rings.js?v=eye-42';
 import { trackLabel } from './storm-identifiers.js';
 import { SimulationClock } from './cloud-clock.js';
 import { isInfrared, scaleRGBA } from './satellite-scales.js?v=global-39';
@@ -372,7 +373,7 @@ export class WeatherSandbox {
     document.querySelector('#release-storm').hidden = this.sim.selectedId === null;
     const radiiByQuadrant = selected ? windRadii(selected) : [];
     document.querySelector('#wind-radii').textContent = selected
-      ? say(`环流范围：${Math.round(circulationRadius(selected))} km（非固定风速等级）\n模拟风圈 km · 东北/东南/西南/西北\n${radiiByQuadrant.map((radii, i) => `${[7, 10, 12][i]}级：${radii.map(Math.round).join(' / ')}`).join('\n')}\n风眼组织度 ${Math.round(selected.eye * 100)}%`, `Circulation extent: ${Math.round(circulationRadius(selected))} km (not a fixed wind category)\nSimulated wind radii, km · NE / SE / SW / NW\n${radiiByQuadrant.map((radii, i) => `Force ${[7, 10, 12][i]}: ${radii.map(Math.round).join(" / ")}`).join("\n")}\nEye organization ${Math.round(selected.eye * 100)}%`)
+      ? say(`环流范围：${Math.round(circulationRadius(selected))} km（非固定风速等级）\n模拟风圈 km · 东北/东南/西南/西北\n${radiiByQuadrant.map((radii, i) => `${[7, 10, 12][i]}级：${radii.map(Math.round).join(' / ')}`).join('\n')}\n风眼组织度 ${Math.round(selected.eye * 100)}%`, `Circulation extent: ${Math.round(circulationRadius(selected))} km (not a fixed wind category)\nSimulated wind radii, km · NE / SE / SW / NW\n${radiiByQuadrant.map((radii, i) => `Force ${[7, 10, 12][i]}: ${radii.map(Math.round).join(" / ")}`).join("\n")}\nEye organization ${Math.round(selected.eye * 100)}%`) + eyeStructureDetails(selected, say('zh', 'en'))
       : t('7 / 10 / 12 级：13.9 / 24.5 / 32.7 m/s。四象限模拟半径，不等同 CMA 业务数据或平均时段。');
     document.querySelector('#seed-info').textContent = `${say("种子 ","Seed ")}${this.sim.seed.toString(16).toUpperCase()} · ${say("NOAA 1991–2020 气候背景 · 非实况","NOAA 1991–2020 climate · not observations")}`;
   }
