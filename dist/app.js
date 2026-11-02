@@ -1,5 +1,6 @@
+import {initLanguage,t} from './i18n.js';
 import { REGION, clamp, project, unproject, fitRegion, worldAt, zoomAt, formatCoordinate, constrainView, normalizeLongitude, traceLandRing } from './map-math.js';
-import { WeatherSandbox } from './weather.js?v=global-39';
+import { WeatherSandbox } from './weather.js?v=plain-40';
 import { Terrain } from './terrain.js';
 import { TerrainRaster } from './terrain-raster.js';
 import { LandIndex } from './land-index.js';
@@ -101,7 +102,7 @@ function drawLabels() {
     const size = kind === 'ocean' ? (width < 600 ? 15 : 20) : kind === 'small' ? 10 : 12;
     context.font = `${kind === 'ocean' ? 400 : 500} ${size}px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
     context.fillStyle = kind === 'land' || kind === 'small' ? 'rgba(31, 77, 47, .76)' : 'rgba(32, 91, 128, .56)';
-    context.fillText(text, x, y);
+    context.fillText(t(text), x, y);
   }
   context.textBaseline = 'alphabetic';
 }
@@ -282,7 +283,7 @@ gridToggle.addEventListener('click', () => {
 });
 
 async function loadLand() {
-  retry.hidden = true; status.hidden = false; status.textContent = '正在加载海岸线…';
+  retry.hidden = true; status.hidden = false; status.textContent = t('正在加载海岸线…');
   try {
     const response = await fetch('./data/ne_50m_land.geojson');
     if (!response.ok) throw new Error(`Map data: HTTP ${response.status}`);
@@ -325,10 +326,16 @@ async function loadLand() {
     canvas.dataset.ready = 'true'; requestDraw();
   } catch (error) {
     console.error(error);
-    status.textContent = '地图加载失败，请重试';
+    status.textContent = t('地图加载失败，请重试');
     retry.hidden = false;
   }
 }
+initLanguage(() => {
+  paintedKey = '';
+  if (!loaded) status.textContent = t(retry.hidden ? '正在加载海岸线…' : '地图加载失败，请重试');
+  weather?.refreshLanguage();
+  requestDraw();
+});
 retry.addEventListener('click', loadLand);
 new ResizeObserver(resize).observe(canvas);
 window.addEventListener('resize', resize);

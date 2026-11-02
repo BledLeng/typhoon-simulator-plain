@@ -1,6 +1,7 @@
 """Serve only the web edition on loopback, then open it in the default browser."""
 import argparse
 import errno
+import os
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -12,12 +13,16 @@ DIST = Path(__file__).resolve().parents[1] / "dist"
 
 
 class StaticFiles(SimpleHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
                       ".js": "text/javascript", ".wasm": "application/wasm"}
 
 
 class LocalServer(ThreadingHTTPServer):
-    allow_reuse_address = False
+    # A cold module graph can create a connection burst. Python 3.8–3.14
+    # otherwise queues only a handful, causing intermittent resets on macOS.
+    request_queue_size = 128
+    allow_reuse_address = os.name != "nt"
 
 
 def bind(port):

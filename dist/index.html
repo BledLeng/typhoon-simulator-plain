@@ -1,91 +1,92 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#8bc4e6">
-  <meta name="description" content="全球气旋教育模拟：连续水汽云水场、地形影响、地中海类热带气旋与全球海盆；非实况或气象预报。">
-  <title>台风模拟器 · 简洁版</title>
+  <meta name="description" data-zh-content="全球气旋教育模拟：连续水汽云水场、地形影响、地中海类热带气旋与全球海盆；非实况或气象预报。" content="Explore a simulated global atmosphere, tropical cyclones, terrain and satellite imagery. Not live weather or a forecast.">
+  <title data-zh-text="台风模拟器 · 简洁版">Typhoon Simulator · Plain Edition</title>
   <link rel="modulepreload" href="./satellite-scales.js?v=global-39">
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <main class="map-shell" aria-label="全球气旋地图">
-    <canvas id="map" tabindex="0" aria-label="地图。左键拖动平移，单击空白处打开生成菜单，点击气旋只查看数据，Shift 开始手动干预，Escape 结束干预。方向键移动，加减键缩放，Enter 在视野中心生成或查看。"></canvas>
-    <div class="simulation-clock" aria-label="模拟时间控制">
-      <button id="pause" aria-label="暂停模拟" title="暂停或继续"><svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg></button>
-      <div><output id="sim-time">第 1 天 · 00:00</output><small><span id="actual-rate">实际 0.0h/s</span> · 非气象预报</small></div>
-      <button id="time-rate" aria-label="模拟时间倍率" title="目标速度：1 / 3 / 6 / 12 / 24h/s；高负载时自动回压，保持云场同步">1h/s</button>
+  <main class="map-shell" data-zh-aria-label="全球气旋地图" aria-label="Global cyclone map">
+    <canvas id="map" tabindex="0" data-zh-aria-label="地图。左键拖动平移，单击空白处打开生成菜单，点击气旋只查看数据，Shift 开始手动干预，Escape 结束干预。方向键移动，加减键缩放，Enter 在视野中心生成或查看。" aria-label="Map. Drag with the left button to pan. Click empty space to create a system or click a cyclone to inspect it. Shift to steer; Escape to release. Arrow keys pan, plus/minus zoom, Enter inspects or creates at the centre."></canvas>
+    <div class="simulation-clock" data-zh-aria-label="模拟时间控制" aria-label="Simulation clock">
+      <button id="pause" data-zh-aria-label="暂停模拟" aria-label="Pause simulation" data-zh-title="暂停或继续" title="Pause or resume"><svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg></button>
+      <div><output id="sim-time"><span data-zh-text="第 1 天 · 00:00">Day 1 · 00:00</span></output><small><span id="actual-rate"><span data-zh-text="实际 0.0h/s">Actual 0.0 h/s</span></span><span data-zh-text=" · 非气象预报"> · Not a forecast</span></small></div>
+      <button id="time-rate" data-zh-aria-label="模拟时间倍率" aria-label="Simulation speed" data-zh-title="目标速度：1 / 3 / 6 / 12 / 24h/s；高负载时自动回压，保持云场同步" title="Target: 1 / 3 / 6 / 12 / 24 simulated hours per second. Under load the clock slows to match the cloud field.">1h/s</button>
     </div>
 
-    <div class="map-state" id="status" role="status">正在加载海岸线…</div>
-    <button id="retry" class="retry" hidden>重新加载</button>
+    <div class="map-state" id="status" role="status"><span data-zh-text="正在加载海岸线…">Loading coastlines…</span></div>
+    <button id="retry" class="retry" hidden><span data-zh-text="重新加载">Retry</span></button>
 
-    <aside class="map-tools" aria-label="地图工具">
-      <button id="zoom-in" aria-label="放大地图" title="放大（+）"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-      <button id="zoom-out" aria-label="缩小地图" title="缩小（−）"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <aside class="map-tools" data-zh-aria-label="地图工具" aria-label="Map tools">
+      <button id="zoom-in" data-zh-aria-label="放大地图" aria-label="Zoom in" data-zh-title="放大（+）" title="Zoom in (+)"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button id="zoom-out" data-zh-aria-label="缩小地图" aria-label="Zoom out" data-zh-title="缩小（−）" title="Zoom out (−)"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
       <span class="tool-separator" aria-hidden="true"></span>
-      <button id="reset" aria-label="恢复全球全览" title="全球全览（Home）"><svg viewBox="0 0 24 24"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M9 12h6m-3-3v6"/></svg></button>
-      <button id="grid-toggle" aria-label="显示或隐藏经纬网" aria-pressed="true" title="经纬网"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9.5 4v16M14.5 4v16M4 9.5h16M4 14.5h16"/></svg></button>
-      <button id="layer-toggle" aria-label="地图显示类型" aria-haspopup="menu" aria-expanded="false" title="地图显示类型"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5ZM3 12l9 5 9-5M3 16l9 5 9-5"/></svg></button>
-      <button id="environment-toggle" aria-label="环境数值" aria-pressed="false" title="环境数值"><svg viewBox="0 0 24 24"><path d="M12 3v10m-3-7V5a3 3 0 0 1 6 0v9a5 5 0 1 1-6 0V9"/><circle cx="12" cy="17" r="1.5"/></svg></button>
-      <button id="wind-rings" aria-label="环流范围及七级十级十二级模拟风圈" aria-pressed="true" title="蓝色虚线：环流范围；实线：七级 / 十级 / 十二级风圈"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3"/></svg></button>
-      <button id="ranking-toggle" aria-label="气旋排行榜" aria-expanded="false" title="排行榜"><svg viewBox="0 0 24 24"><path d="M8 20V10h8v10M3 20v-6h5m8-8h5v14M3 20h18M10 5l2-2 2 2"/></svg></button>
+      <button id="reset" data-zh-aria-label="恢复全球全览" aria-label="Reset world view" data-zh-title="全球全览（Home）" title="World view (Home)"><svg viewBox="0 0 24 24"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4M9 12h6m-3-3v6"/></svg></button>
+      <button id="grid-toggle" data-zh-aria-label="显示或隐藏经纬网" aria-label="Toggle graticule" aria-pressed="true" data-zh-title="经纬网" title="Graticule"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9.5 4v16M14.5 4v16M4 9.5h16M4 14.5h16"/></svg></button>
+      <button id="layer-toggle" data-zh-aria-label="地图显示类型" aria-label="Map layers" aria-haspopup="menu" aria-expanded="false" data-zh-title="地图显示类型" title="Map layers"><svg viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5ZM3 12l9 5 9-5M3 16l9 5 9-5"/></svg></button>
+      <button id="environment-toggle" data-zh-aria-label="环境数值" aria-label="Environment readings" aria-pressed="false" data-zh-title="环境数值" title="Environment readings"><svg viewBox="0 0 24 24"><path d="M12 3v10m-3-7V5a3 3 0 0 1 6 0v9a5 5 0 1 1-6 0V9"/><circle cx="12" cy="17" r="1.5"/></svg></button>
+      <button id="wind-rings" data-zh-aria-label="环流范围及七级十级十二级模拟风圈" aria-label="Circulation extent and force 7, 10 and 12 wind radii" aria-pressed="true" data-zh-title="蓝色虚线：环流范围；实线：七级 / 十级 / 十二级风圈" title="Dashed blue: circulation extent. Solid: force 7, 10 and 12 wind radii."><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <button id="ranking-toggle" data-zh-aria-label="气旋排行榜" aria-label="Cyclone leaderboard" aria-expanded="false" data-zh-title="排行榜" title="Leaderboard"><svg viewBox="0 0 24 24"><path d="M8 20V10h8v10M3 20v-6h5m8-8h5v14M3 20h18M10 5l2-2 2 2"/></svg></button>
     </aside>
 
-    <nav class="environment-launcher" aria-label="独立环境控制">
-      <button id="environment-edit-toggle" aria-label="环境设置" aria-pressed="false">环境设置</button>
-      <button id="genesis-rate">生成概率 1×</button>
+    <nav class="environment-launcher" data-zh-aria-label="独立环境控制" aria-label="Environment controls">
+      <button id="environment-edit-toggle" data-zh-aria-label="环境设置" aria-label="Environment" aria-pressed="false"><span data-zh-text="环境设置">Environment</span></button>
+      <button type="button" id="language-toggle" lang="zh-CN" aria-label="切换到中文">中文</button>
+      <button id="genesis-rate"><span data-zh-text="生成概率 1×">Genesis 1×</span></button>
     </nav>
 
-    <section id="environment-editor" aria-label="环境自定义" hidden></section>
+    <section id="environment-editor" data-zh-aria-label="环境自定义" aria-label="Edit environment" hidden></section>
     <dialog id="ranking-panel" aria-labelledby="ranking-title">
       <div class="ranking-content">
-        <header><div><p class="ranking-eyebrow">本次模拟 · 已结束的生命周期</p><h1 id="ranking-title">气旋排行榜</h1></div><button id="ranking-close" aria-label="关闭排行榜"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
-        <p class="ranking-note">按巅峰风速排序，同风速比较最低气压。仅收录已结束的气旋。全部采用 1 分钟模拟风速；印度洋、澳洲及南太平洋等级为模拟映射，非当地 3 / 10 分钟官方定级；台风高等级与地中海等级为自定义。</p>
+        <header><div><p class="ranking-eyebrow"><span data-zh-text="本次模拟 · 已结束的生命周期">This run · Completed lifecycles</span></p><h1 id="ranking-title"><span data-zh-text="气旋排行榜">Cyclone leaderboard</span></h1></div><button id="ranking-close" data-zh-aria-label="关闭排行榜" aria-label="Close leaderboard"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+        <p class="ranking-note"><span data-zh-text="按巅峰风速排序，同风速比较最低气压。仅收录已结束的气旋。全部采用 1 分钟模拟风速；印度洋、澳洲及南太平洋等级为模拟映射，非当地 3 / 10 分钟官方定级；台风高等级与地中海等级为自定义。">Completed cyclones only. Ranked by peak wind, then lowest pressure. All winds are simulated one-minute means. Indian Ocean, Australian and South Pacific grades are model equivalents, not official 3- or 10-minute ratings. Upper typhoon and Mediterranean grades are simulator-defined.</span></p>
         <div id="ranking-rows" aria-live="polite"></div>
       </div>
     </dialog>
 
-    <section id="environment-panel" class="environment-panel" aria-label="环境与选中风暴" hidden>
+    <section id="environment-panel" class="environment-panel" data-zh-aria-label="环境与选中风暴" aria-label="Environment and selected storm" hidden>
       <div class="inspector-content">
-      <div class="panel-title"><strong id="system-title">环境</strong><button id="close-panel" aria-label="收起环境">×</button></div>
-      <p id="system-summary">点击环流查看数据；按 Shift 关闭菜单并开始方向干预。</p>
+      <div class="panel-title"><strong id="system-title"><span data-zh-text="环境">Environment</span></strong><button id="close-panel" data-zh-aria-label="收起环境" aria-label="Close inspector">×</button></div>
+      <p id="system-summary"><span data-zh-text="点击环流查看数据；按 Shift 关闭菜单并开始方向干预。">Click a circulation to inspect it. Press Shift to close the menu and steer.</span></p>
       <dl id="environment-values"></dl>
-      <div class="environment-options"><button id="weather-layer" aria-haspopup="menu" aria-expanded="false">图层：云水 ▾</button></div>
+      <div class="environment-options"><button id="weather-layer" aria-haspopup="menu" aria-expanded="false"><span data-zh-text="图层：云水 ▾">Layer: Cloud water ▾</span></button></div>
       <p id="cloud-product-legend" hidden></p>
       <p id="wind-radii"></p>
-      <button id="release-storm" hidden>结束方向干预 <span>Esc</span></button>
+      <button id="release-storm" hidden><span data-zh-text="结束方向干预 ">Stop steering </span><span>Esc</span></button>
       <small id="seed-info"></small>
       </div>
     </section>
-    <output id="selected-status" aria-label="选中气旋状态" hidden></output>
+    <output id="selected-status" data-zh-aria-label="选中气旋状态" aria-label="Selected cyclone status" hidden></output>
     <div id="notification" role="status" hidden></div>
-    <div id="spawn-menu" role="group" aria-label="生成天气系统" hidden>
+    <div id="spawn-menu" role="group" data-zh-aria-label="生成天气系统" aria-label="Create a weather system" hidden>
       <div class="menu-content">
         <div class="spawn-size">
-          <div class="spawn-heading"><label for="spawn-radius">初始环流半径</label><output id="spawn-radius-value" for="spawn-radius">300 km</output><button type="button" id="random-radius" aria-pressed="false" aria-label="随机初始环流半径">随机</button></div>
-          <input id="spawn-radius" type="range" min="0" max="1" step="0.001" aria-label="初始环流半径">
-          <small>随机 70–800 km · 手动 70–2600 km · 生成后随环境演变</small>
+          <div class="spawn-heading"><label for="spawn-radius"><span data-zh-text="初始环流半径">Initial circulation radius</span></label><output id="spawn-radius-value" for="spawn-radius">300 km</output><button type="button" id="random-radius" aria-pressed="false" data-zh-aria-label="随机初始环流半径" aria-label="Random initial circulation radius"><span data-zh-text="随机">Random</span></button></div>
+          <input id="spawn-radius" type="range" min="0" max="1" step="0.001" data-zh-aria-label="初始环流半径" aria-label="Initial circulation radius">
+          <small><span data-zh-text="随机 70–800 km · 手动 70–2600 km · 生成后随环境演变">Random: 70–800 km. Manual: 70–2,600 km. Size evolves after formation.</span></small>
         </div>
-        <button role="menuitem" data-spawn="low"><svg viewBox="0 0 24 24"><path d="M7 4v16h12"/></svg><span>强制生成低压</span></button>
-        <button role="menuitem" data-spawn="disturbance"><svg viewBox="0 0 24 24"><path d="M19 5a8 8 0 0 0-13 4 6 6 0 0 1 11 6M5 19a8 8 0 0 0 13-4A6 6 0 0 1 7 9"/><circle cx="12" cy="12" r="2.5"/></svg><span>生成热带扰动</span></button>
-        <button role="menuitem" data-spawn="subtropical"><svg viewBox="0 0 24 24"><path d="M20 8A9 9 0 0 0 4 15m1 4a9 9 0 0 0 15-7M8 10a5 5 0 0 1 8 5"/></svg><span>生成亚热带气旋</span></button>
-        <button role="menuitem" data-spawn="cloud"><svg viewBox="0 0 24 24"><path d="M6 18a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 1 1 2 10Z"/></svg><span>生成云团</span></button>
-        <button role="menuitem" data-spawn="extratropical"><svg viewBox="0 0 24 24"><path d="M6 5v14h12M3 9h3m12 5h3"/></svg><span>生成温带气旋</span></button>
-        <button role="menuitem" data-spawn="anticyclone"><svg viewBox="0 0 24 24"><path d="M6 5v14M18 5v14M6 12h12"/></svg><span>生成反气旋</span></button>
+        <button role="menuitem" data-spawn="low"><svg viewBox="0 0 24 24"><path d="M7 4v16h12"/></svg><span><span data-zh-text="强制生成低压">Create a low anywhere</span></span></button>
+        <button role="menuitem" data-spawn="disturbance"><svg viewBox="0 0 24 24"><path d="M19 5a8 8 0 0 0-13 4 6 6 0 0 1 11 6M5 19a8 8 0 0 0 13-4A6 6 0 0 1 7 9"/><circle cx="12" cy="12" r="2.5"/></svg><span><span data-zh-text="生成热带扰动">Create tropical disturbance</span></span></button>
+        <button role="menuitem" data-spawn="subtropical"><svg viewBox="0 0 24 24"><path d="M20 8A9 9 0 0 0 4 15m1 4a9 9 0 0 0 15-7M8 10a5 5 0 0 1 8 5"/></svg><span><span data-zh-text="生成亚热带气旋">Create subtropical cyclone</span></span></button>
+        <button role="menuitem" data-spawn="cloud"><svg viewBox="0 0 24 24"><path d="M6 18a4 4 0 0 1-1-8 6 6 0 0 1 11-2 5 5 0 1 1 2 10Z"/></svg><span><span data-zh-text="生成云团">Create cloud cluster</span></span></button>
+        <button role="menuitem" data-spawn="extratropical"><svg viewBox="0 0 24 24"><path d="M6 5v14h12M3 9h3m12 5h3"/></svg><span><span data-zh-text="生成温带气旋">Create extratropical cyclone</span></span></button>
+        <button role="menuitem" data-spawn="anticyclone"><svg viewBox="0 0 24 24"><path d="M6 5v14M18 5v14M6 12h12"/></svg><span><span data-zh-text="生成反气旋">Create anticyclone</span></span></button>
       </div>
     </div>
-    <div id="layer-menu" role="menu" aria-label="地图显示类型" hidden><div class="menu-content"></div></div>
+    <div id="layer-menu" role="menu" data-zh-aria-label="地图显示类型" aria-label="Map layers" hidden><div class="menu-content"></div></div>
 
-    <aside id="satellite-scale" aria-label="模拟云图色标" hidden><strong></strong><canvas width="261" height="1" aria-hidden="true"></canvas><small><span></span><span></span><span></span></small></aside>
+    <aside id="satellite-scale" data-zh-aria-label="模拟云图色标" aria-label="Simulated satellite legend" hidden><strong></strong><canvas width="261" height="1" aria-hidden="true"></canvas><small><span></span><span></span><span></span></small></aside>
     <footer class="map-footer">
-      <div class="map-key"><span id="system-count">随机环境</span></div>
-      <output id="coordinates" aria-label="光标经纬度">135.00°E · 25.00°N</output>
-      <a href="./credits.html" target="_blank" rel="noopener">数据与许可</a>
+      <div class="map-key"><span id="system-count"><span data-zh-text="随机环境">Random environment</span></span></div>
+      <output id="coordinates" data-zh-aria-label="光标经纬度" aria-label="Pointer coordinates">135.00°E · 25.00°N</output>
+      <a href="./credits.html" target="_blank" rel="noopener"><span data-zh-text="数据与许可">Data & license</span></a>
     </footer>
   </main>
-  <script type="module" src="./app.js?v=global-39"></script>
+  <script type="module" src="./app.js?v=plain-40"></script>
 </body>
 </html>

@@ -1,7 +1,8 @@
+import {bindMarkup, say, t, stormText, eventText} from './i18n.js';
 import { Simulation, systemLabel, regionalGrade, gradeNote, isHighLatitudeSystem, visibleSystem, toKnots, pacificLongitude, windRadii } from './simulation.js?v=global-39';
-import { CloudRenderer } from './cloud-renderer.js?v=global-39';
+import { CloudRenderer } from './cloud-renderer.js?v=plain-40';
 import { formatCoordinate } from './map-math.js';
-import { EnvironmentEditor } from './environment-editor.js?v=global-39';
+import { EnvironmentEditor } from './environment-editor.js?v=plain-40';
 import { PopupMenu } from './popup-menu.js';
 import { MAP_LAYERS, INITIAL_RADIUS, radiusFromPosition, positionFromRadius, spawnOptions, nextTimeRate } from './weather-options.js?v=global-39';
 import { pressureRange } from './pressure-field.js';
@@ -44,6 +45,7 @@ export class WeatherSandbox {
       const dt = document.createElement('dt'), dd = document.createElement('dd');
       dt.textContent = name; this.fields.append(dt, dd); return dd;
     });
+    bindMarkup(this.layerMenuElement); bindMarkup(this.fields);
     this.menu = new PopupMenu(this.menuElement, '[data-spawn]', item => this.spawn(item.dataset.spawn));
     this.layerMenu = new PopupMenu(this.layerMenuElement, '[data-layer]', item => this.selectLayer(item.dataset.layer), () => this.setLayerExpanded(false));
     const radius = document.querySelector('#spawn-radius');
@@ -63,7 +65,7 @@ export class WeatherSandbox {
     document.querySelector('#pause').addEventListener('click', () => {
       this.paused = !this.paused; this.previousTime = null;
       const button = document.querySelector('#pause');
-      button.setAttribute('aria-label', this.paused ? '继续模拟' : '暂停模拟');
+      button.setAttribute('aria-label', t(this.paused ? '继续模拟' : '暂停模拟'));
       button.innerHTML = this.paused ? '<svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg>';
       this.updateUI();
       invalidate();
@@ -96,6 +98,16 @@ export class WeatherSandbox {
     document.addEventListener('keydown', event => this.handleKeyDown(event));
     document.addEventListener('visibilitychange', () => { this.previousTime = null; if (!document.hidden) invalidate(); });
     window.addEventListener('pagehide', () => this.save());
+    this.refreshLanguage();
+  }
+  refreshLanguage() {
+    this.rankingCount = -1;
+    document.querySelector('#pause').setAttribute('aria-label', t(this.paused ? '继续模拟' : '暂停模拟'));
+    document.querySelector('#actual-rate').textContent = this.paused ? t('已暂停') : say('实际 ','Actual ')+this.clock.actualRate.toFixed(1)+'h/s';
+    document.querySelector('#notification').hidden = true;
+    this.lastMetrics = -Infinity;
+    this.editor.sync();
+    this.selectLayer(this.clouds.layer);
     this.updateUI();
   }
   get running() { return !this.paused && !document.hidden; }
@@ -149,16 +161,16 @@ export class WeatherSandbox {
     const legend = document.querySelector('#cloud-product-legend');
     const conv = layer === 'convection', ir = isInfrared(layer), solar = layer === 'day-night';
     legend.hidden = !(conv || ir || solar || layer === 'pressure'); legend.dataset.product = layer;
-    legend.textContent = conv ? '根据上升凝结和云水估算活跃度；灰色为不活跃云，不是雷达回波。'
-      : solar ? '金线为晨昏线。日侧看可见光云水，夜侧看热红外，冷云顶更亮。时间为模拟 UTC。'
-      : layer === 'infrared' ? '模拟亮温：深红是冷云顶，较暖的云呈浅色到绿色，+8 °C 及以上透明。'
-      : '同一时刻的模拟红外亮温，仅改变增强色表；非实测卫星资料。';
+    legend.textContent = conv ? t('根据上升凝结和云水估算活跃度；灰色为不活跃云，不是雷达回波。')
+      : solar ? t('金线为晨昏线。日侧看可见光云水，夜侧看热红外，冷云顶更亮。时间为模拟 UTC。')
+      : layer === 'infrared' ? t('模拟亮温：深红是冷云顶，较暖的云呈浅色到绿色，+8 °C 及以上透明。')
+      : t('同一时刻的模拟红外亮温，仅改变增强色表；非实测卫星资料。');
     const scale = document.querySelector('#satellite-scale');
     scale.hidden = !(conv || ir || solar);
     scale.querySelector('canvas').hidden = solar;scale.querySelector('small').hidden = solar;
-    if (solar) scale.querySelector('strong').textContent = '昼夜 · 金线为晨昏线（模拟 UTC）';
+    if (solar) scale.querySelector('strong').textContent = t('昼夜 · 金线为晨昏线（模拟 UTC）');
     if (conv || ir) {
-      scale.querySelector('strong').textContent = choice[1] + (conv ? ' · 模拟活跃度' : ' · 模拟亮温 °C');
+      scale.querySelector('strong').textContent = t(choice[1]) + ' · ' + t(conv ? '模拟活跃度' : '模拟亮温 °C');
       const strip = scale.querySelector('canvas'), ctx = strip.getContext('2d');
       ctx.clearRect(0,0,strip.width,strip.height);
       for (let x=0;x<strip.width;x++) {
@@ -168,16 +180,16 @@ export class WeatherSandbox {
         ctx.fillRect(x,0,1,1);
       }
       const ticks = conv ? ['弱','0.5','强'] : layer==='infrared' ? ['+8','−41','−90'] : ['+40','−25','−90'];
-      scale.querySelectorAll('small span').forEach((span,i)=>{span.textContent=ticks[i];});
+      scale.querySelectorAll('small span').forEach((span,i)=>{span.textContent=t(ticks[i]);});
     }
-    document.querySelector('#weather-layer').textContent = `图层：${choice[1]} ▾`;
+    document.querySelector('#weather-layer').textContent = `${say("图层：","Layer: ")}${t(choice[1])} ▾`;
     for (const item of this.layerMenuElement.querySelectorAll('[data-layer]')) item.setAttribute('aria-checked',String(item.dataset.layer === layer));
     if (layer === 'pressure') this.updatePressureLegend();
     this.invalidate();
   }
   updatePressureLegend() {
     const [min,max] = this.clouds.pressureRange || pressureRange(this.sim.systems);
-    document.querySelector('#cloud-product-legend').textContent = `气压 ${min}—${max} hPa · 蓝色较低，橙色较高 · 包含气旋与高压（模拟）`;
+    document.querySelector('#cloud-product-legend').textContent = say(`气压 ${min}—${max} hPa · 蓝色较低，橙色较高 · 包含气旋与高压（模拟）`, `Pressure ${min}–${max} hPa · Blue: lower, orange: higher · Cyclones and highs (simulated)`);
   }
   showRanking() {
     this.menu.close(); this.layerMenu.close(); this.showPanel(false); this.editor.show(false);
@@ -193,20 +205,20 @@ export class WeatherSandbox {
     rows.replaceChildren();
     if (!records.length) {
       const empty = document.createElement('p'); empty.className = 'ranking-empty';
-      empty.textContent = '还没有结束生命周期的气旋。'; rows.append(empty); return;
+      empty.textContent = t('还没有结束生命周期的气旋。'); rows.append(empty); return;
     }
     for (const [index, record] of records.entries()) {
       const row = document.createElement('article'); row.className = 'ranking-row';
       const rank = document.createElement('span'); rank.textContent = String(index + 1).padStart(2, '0');
       const title = document.createElement('div'), name = document.createElement('strong'), detail = document.createElement('small');
-      name.textContent = [trackLabel(record), record.stormName, record.name].filter(Boolean).join(' · ');
-      detail.textContent = `持续 ${(record.endHour - record.startHour).toFixed(1)} 小时 · ${record.reason}`;
+      name.textContent = [t(trackLabel(record)), record.stormName, t(record.name)].filter(Boolean).join(' · ');
+      detail.textContent = `${say("持续 ","Duration: ")}${(record.endHour - record.startHour).toFixed(1)} ${say("小时","h")} · ${t(record.reason)}`;
       title.append(name, detail);
       const result = document.createElement('div'); result.className = 'ranking-result';
       const wind = document.createElement('strong'), pressure = document.createElement('small');
       wind.textContent = `${record.peakKnots} kt`; pressure.textContent = `${record.minimumPressure.toFixed(1)} hPa`;
       if (record.gradeColor) wind.style.color = record.gradeColor;
-      if (record.gradeNote) row.title = record.gradeNote;
+      if (record.gradeNote) row.title = t(record.gradeNote);
       result.append(wind, pressure); row.append(rank, title, result); rows.append(row);
     }
   }
@@ -245,9 +257,9 @@ export class WeatherSandbox {
       this.canvas.dataset.simulationActualRate = String(this.clock.actualRate);
       this.canvas.dataset.simulationTargetRate = String(this.rate);
       const rate = document.querySelector('#time-rate');
-      rate.title = `目标 ${this.rate}h/s · 实际 ${this.clock.actualRate.toFixed(1)}h/s（保留完整网格与物理步长）`;
+      rate.title = say(`目标 ${this.rate}h/s · 实际 ${this.clock.actualRate.toFixed(1)}h/s（保留完整网格与物理步长）`,`Target ${this.rate} h/s · Actual ${this.clock.actualRate.toFixed(1)} h/s (full grid and solver steps)`);
       document.querySelector('#actual-rate').textContent = this.running
-        ? `实际 ${this.clock.actualRate.toFixed(1)}h/s` : '已暂停';
+        ? `${say("实际 ","Actual ")}${this.clock.actualRate.toFixed(1)}h/s` : t('已暂停');
       this.physicsPeakMs = 0;
     }
     const lastEvent = this.sim.events.at(-1);
@@ -291,7 +303,7 @@ export class WeatherSandbox {
     this.menuLocation = this.locate(position);
     this.menuLocation.longitude = pacificLongitude(this.menuLocation.longitude);
     if (Math.abs(this.menuLocation.latitude) > 85) {
-      this.notify('墨卡托模拟范围为南北纬 85° 之间'); return;
+      this.notify(t('墨卡托模拟范围为南北纬 85° 之间')); return;
     }
     this.menu.open(position.x, position.y, this.canvas);
   }
@@ -299,19 +311,19 @@ export class WeatherSandbox {
     if (!this.menuLocation) return;
     const { longitude, latitude } = this.menuLocation;
     if (kind === 'disturbance' && this.sim.isLand(longitude, latitude)) {
-      this.notify('热带扰动需要海面；陆地上可以生成云团'); return;
+      this.notify(t('热带扰动需要海面；陆地上可以生成云团')); return;
     }
     const options = spawnOptions(kind, this.spawnRadius, this.randomRadius ? this.sim.rng : null);
     const created = this.sim.add(kind === 'low' ? 'disturbance' : kind, longitude, latitude, options);
     if (created) { this.canvas.dataset.lastSpawnRadius = String(created.radius); this.canvas.dataset.lastSpawnKind = kind; }
-    if (!created) this.notify('当前已达 160 个环流候选的计算上限');
-    else this.notify(kind === 'cloud' ? '云团已生成，将随环境演变'
-      : [systemLabel(created) + '已生成', options.customRadius ? '环流 ' + created.birthRadius + ' km' : '', '点击中心查看'].filter(Boolean).join(' · '));
+    if (!created) this.notify(t('当前已达 160 个环流候选的计算上限'));
+    else this.notify(kind === 'cloud' ? t('云团已生成，将随环境演变')
+      : [stormText(systemLabel(created)) + say('已生成',' created'), options.customRadius ? say('环流 ','Circulation: ') + created.birthRadius + ' km' : '', t('点击中心查看')].filter(Boolean).join(' · '));
     this.updateUI(); this.save(); this.invalidate();
   }
   notify(message) {
     const element = document.querySelector('#notification');
-    element.textContent = message; element.hidden = false;
+    element.textContent = eventText(message); element.hidden = false;
     clearTimeout(this.notificationTimer);
     this.notificationTimer = setTimeout(() => { element.hidden = true; this.invalidate(); }, 2600);
     this.invalidate();
@@ -320,9 +332,9 @@ export class WeatherSandbox {
     if (this.ranking.open) this.renderRankings();
     if (this.clouds.layer === 'pressure') this.updatePressureLegend();
     const hours = this.sim.hours;
-    document.querySelector('#sim-time').textContent = `第 ${Math.floor(hours / 24) + 1} 天 · ${String(Math.floor(hours % 24)).padStart(2, '0')}:${String(Math.floor(hours * 60 % 60)).padStart(2, '0')}`;
+    document.querySelector('#sim-time').textContent = `${say("第 ","Day ")}${Math.floor(hours / 24) + 1}${say(" 天","")} · ${String(Math.floor(hours % 24)).padStart(2, '0')}:${String(Math.floor(hours * 60 % 60)).padStart(2, '0')}`;
     const storms = this.sim.systems.filter(visibleSystem);
-    document.querySelector('#system-count').textContent = this.clouds.error ? '云场计算异常 · 请刷新' : `${storms.filter(s => s.kind === 'disturbance').length} 热带 · ${storms.filter(s => s.kind === 'subtropical').length} 亚热带 · ${storms.filter(s => s.kind === 'extratropical').length} 温带 · ${storms.filter(s => s.kind === 'anticyclone').length} 高压 · ${this.sim.systems.filter(s => s.kind === 'cloud').length} 云候选`;
+    document.querySelector('#system-count').textContent = this.clouds.error ? t('云场计算异常 · 请刷新') : `${storms.filter(s => s.kind === 'disturbance').length} ${say('热带','tropical')} · ${storms.filter(s => s.kind === 'subtropical').length} ${say('亚热带','subtropical')} · ${storms.filter(s => s.kind === 'extratropical').length} ${say('温带','extratropical')} · ${storms.filter(s => s.kind === 'anticyclone').length} ${say('高压','highs')} · ${this.sim.systems.filter(s => s.kind === 'cloud').length} ${say('云候选','cloud candidates')}`;
     const selected = this.sim.systems.find(s => s.id === (this.sim.selectedId ?? this.inspectedId));
     this.canvas.dataset.systemCount = String(this.sim.systems.length);
     this.canvas.dataset.selectedStorm = selected ? String(selected.id) : '';
@@ -334,8 +346,8 @@ export class WeatherSandbox {
       if (!wind) { wind = document.createElement('span'); wind.className = 'selected-wind'; status.replaceChildren(wind, document.createTextNode('')); }
       wind.textContent = `${Math.round(toKnots(selected.wind))} kt`;
       wind.style.color = regionalGrade(selected)?.color || 'inherit';
-      status.title = `${systemLabel(selected)} · ${gradeNote(selected)}`;
-      status.setAttribute('aria-label', `${systemLabel(selected)}，${Math.round(toKnots(selected.wind))} 节，${Math.round(selected.pressure)} 百帕，${selected.speed.toFixed(1)} 公里每小时`);
+      status.title = `${stormText(systemLabel(selected))} · ${t(gradeNote(selected))}`;
+      status.setAttribute('aria-label', `${stormText(systemLabel(selected))}${say("，",", ")}${Math.round(toKnots(selected.wind))} ${say("节，","kt, ")}${Math.round(selected.pressure)} ${say("百帕，","hPa, ")}${selected.speed.toFixed(1)} ${say("公里每小时","km/h")}`);
       status.lastChild.textContent = ` · ${Math.round(selected.pressure)} hPa · ${selected.speed.toFixed(1)} km/h`;
     }
     // The docked wind/speed display above stays live. Closed inspectors need
@@ -349,19 +361,20 @@ export class WeatherSandbox {
       sst: grid.sst, humidity: grid.humidity, shear: grid.shear, pressure: grid.pressure, ohc: grid.ohc,
       temperature: grid.temperature, water: grid.water,
     });
-    document.querySelector('#system-title').textContent = selected ? `${isHighLatitudeSystem(selected) && !selected.trackCode ? '' : trackLabel(selected) + ' · '}${systemLabel(selected)}` : `环境 · ${formatCoordinate(point.lon, point.lat)}`;
+    document.querySelector('#system-title').textContent = selected ? `${isHighLatitudeSystem(selected) && !selected.trackCode ? '' : t(trackLabel(selected)) + ' · '}${stormText(systemLabel(selected))}` : `${t("环境")} · ${formatCoordinate(point.lon, point.lat)}`;
     document.querySelector('#system-summary').textContent = selected
-      ? `${Math.round(toKnots(selected.wind))} kt（${selected.wind.toFixed(1)} m/s，1 分钟平均）· ${Math.round(selected.pressure)} hPa · 移速 ${selected.speed.toFixed(1)} km/h。${selected.absorbedBy ? '正在被吞并。' : selected.fuji > .1 ? '双涡作用正在发展。' : ''}${isHighLatitudeSystem(selected) ? '' : this.sim.selectedId === selected.id ? '正在手动干预；光标只控制方向，Esc 结束。' : '按 Shift 关闭菜单并开始手动干预。'}`
-      : '随机合成气象场，非实况或预报。云水实时演算；低于 7m/s 的环流不标记。可切换云水、对流、红外和环境图层。';
+      ? say(`${Math.round(toKnots(selected.wind))} kt（${selected.wind.toFixed(1)} m/s，1 分钟平均）· ${Math.round(selected.pressure)} hPa · 移速 ${selected.speed.toFixed(1)} km/h。${selected.absorbedBy ? '正在被吞并。' : selected.fuji > .1 ? '双涡作用正在发展。' : ''}${isHighLatitudeSystem(selected) ? '' : this.sim.selectedId === selected.id ? '正在手动干预；光标只控制方向，Esc 结束。' : '按 Shift 关闭菜单并开始手动干预。'}`, `${Math.round(toKnots(selected.wind))} kt (${selected.wind.toFixed(1)} m/s, 1-minute mean) · ${Math.round(selected.pressure)} hPa · Motion ${selected.speed.toFixed(1)} km/h. ${selected.absorbedBy ? "Merging into another circulation. " : selected.fuji > .1 ? "Binary-vortex interaction developing. " : ""}${isHighLatitudeSystem(selected) ? "" : this.sim.selectedId === selected.id ? "Steering: pointer controls direction only; Esc releases." : "Press Shift to close this panel and steer."}`)
+      : t('随机合成气象场，非实况或预报。云水实时演算；低于 7m/s 的环流不标记。可切换云水、对流、红外和环境图层。');
     const enso = e.enso > .5 ? '厄尔尼诺' : e.enso < -.5 ? '拉尼娜' : '中性';
-    const data = [`${e.sst.toFixed(1)} °C`, `${Math.round(selected?.fieldHumidity ?? e.humidity)} %`, `${e.shear.toFixed(1)} m/s`, `${e.pressure.toFixed(0)} hPa`, `${Math.hypot(e.u, e.v).toFixed(1)} km/h`, `${enso} ${e.enso > 0 ? '+' : ''}${e.enso.toFixed(1)}`, `${e.ridgeLon.toFixed(1)}°E ${e.ridgeLat.toFixed(1)}°N`, `${this.sim.env.ridgePressure.toFixed(0)} hPa`, `${e.ohc.toFixed(1)} kJ/cm²`, `${Math.round(e.depth26)} m`, `${Math.round(e.trough * 100)}% / ${Math.round(e.cold * 100)}%`];
+    const data = [`${e.sst.toFixed(1)} °C`, `${Math.round(selected?.fieldHumidity ?? e.humidity)} %`, `${e.shear.toFixed(1)} m/s`, `${e.pressure.toFixed(0)} hPa`, `${Math.hypot(e.u, e.v).toFixed(1)} km/h`, `${t(enso)} ${e.enso > 0 ? '+' : ''}${e.enso.toFixed(1)}`, `${e.ridgeLon.toFixed(1)}°E ${e.ridgeLat.toFixed(1)}°N`, `${this.sim.env.ridgePressure.toFixed(0)} hPa`, `${e.ohc.toFixed(1)} kJ/cm²`, `${Math.round(e.depth26)} m`, `${Math.round(e.trough * 100)}% / ${Math.round(e.cold * 100)}%`];
     data.push(`${e.temperature.toFixed(1)}°C / ${(e.water ?? selected?.convection ?? 0).toFixed(2)} g/kg`);
     data.forEach((value, i) => { this.values[i].textContent = value; });
     document.querySelector('#release-storm').hidden = this.sim.selectedId === null;
+    const radiiByQuadrant = selected ? windRadii(selected) : [];
     document.querySelector('#wind-radii').textContent = selected
-      ? `环流范围：${Math.round(circulationRadius(selected))} km（非固定风速等级）\n模拟风圈 km · 东北/东南/西南/西北\n${windRadii(selected).map((radii, i) => `${[7, 10, 12][i]}级：${radii.map(Math.round).join(' / ')}`).join('\n')}\n风眼组织度 ${Math.round(selected.eye * 100)}%`
-      : '7 / 10 / 12 级：13.9 / 24.5 / 32.7 m/s。四象限模拟半径，不等同 CMA 业务数据或平均时段。';
-    document.querySelector('#seed-info').textContent = `种子 ${this.sim.seed.toString(16).toUpperCase()} · NOAA 1991–2020 气候背景 · 非实况`;
+      ? say(`环流范围：${Math.round(circulationRadius(selected))} km（非固定风速等级）\n模拟风圈 km · 东北/东南/西南/西北\n${radiiByQuadrant.map((radii, i) => `${[7, 10, 12][i]}级：${radii.map(Math.round).join(' / ')}`).join('\n')}\n风眼组织度 ${Math.round(selected.eye * 100)}%`, `Circulation extent: ${Math.round(circulationRadius(selected))} km (not a fixed wind category)\nSimulated wind radii, km · NE / SE / SW / NW\n${radiiByQuadrant.map((radii, i) => `Force ${[7, 10, 12][i]}: ${radii.map(Math.round).join(" / ")}`).join("\n")}\nEye organization ${Math.round(selected.eye * 100)}%`)
+      : t('7 / 10 / 12 级：13.9 / 24.5 / 32.7 m/s。四象限模拟半径，不等同 CMA 业务数据或平均时段。');
+    document.querySelector('#seed-info').textContent = `${say("种子 ","Seed ")}${this.sim.seed.toString(16).toUpperCase()} · ${say("NOAA 1991–2020 气候背景 · 非实况","NOAA 1991–2020 climate · not observations")}`;
   }
   save() {
     try { localStorage.setItem('typhoon-plain:last-numerical-state', JSON.stringify(this.sim.snapshot())); }

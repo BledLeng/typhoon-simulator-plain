@@ -1,12 +1,25 @@
 <!doctype html>
-<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>数据与许可 · 台风模拟器</title>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Data &amp; license · Typhoon Simulator</title>
 <style>html{color-scheme:light dark}body{max-width:42rem;margin:3rem auto;padding:0 1rem;font:1rem/1.7 system-ui}h1{line-height:1.25}li{margin:.6rem 0}</style>
-<main><a href="./">返回模拟器</a><h1>数据与许可</h1>
+<main id="zh" lang="zh-CN" hidden><a href="./">返回模拟器</a><h1>数据与许可</h1>
 <p><a href="https://github.com/BledLeng/typhoon-simulator-plain">查看或获取本版本的完整源码</a>。原创程序使用 <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL v3</a>（仅第 3 版）。第三方数据仍受各自条款约束。</p>
 <ul>
 <li>海岸线：Made with <a href="https://www.naturalearthdata.com/about/terms-of-use/">Natural Earth</a>，1:50m Land，公有领域。</li>
 <li>全球与区域高程：<a href="https://registry.opendata.aws/terrain-tiles/">Mapzen / Tilezen Terrain Tiles</a>。本项目将 Terrarium 瓦片转换为米制整型网格；详见<a href="./data/terrain-attribution.md">完整提供方署名与许可说明</a>。</li>
 <li>月平均海温和高空风来自 NOAA Physical Sciences Laboratory，Boulder, Colorado, USA（<a href="https://psl.noaa.gov/">NOAA PSL</a>）：ERSSTv5 和 NCEP/NCAR 再分析的 1991–2020 气候平均值，已重新采样。模拟的天气变化不是 NOAA 预报。</li>
 <li>红外显示中的 BW、BD 和 RBTOP 为本地数值色标，参考 Dapiya 云图图例；这里没有转发其实况影像。</li>
-</ul></main></html>
+</ul></main>
+<main id="en" lang="en"><a href="./?lang=en">Return to simulator</a><h1>Data &amp; license</h1>
+<p><a href="https://github.com/BledLeng/typhoon-simulator-plain">Get the complete source code</a>. Original software is licensed under the <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL, version 3 only</a>. Third-party data retain their upstream terms.</p>
+<ul><li>Coastlines: Made with <a href="https://www.naturalearthdata.com/about/terms-of-use/">Natural Earth</a>. 1:50m Land, public domain.</li>
+<li>Global and regional elevation: <a href="https://registry.opendata.aws/terrain-tiles/">Mapzen / Tilezen Terrain Tiles</a>, converted from Terrarium tiles to integer metre grids. See <a href="./data/terrain-attribution.md">all providers and original notices</a>.</li>
+<li>Sea temperatures and upper-air winds: ERSSTv5 and NCEP/NCAR reanalysis (1991–2020 normals), supplied by the <a href="https://psl.noaa.gov/">NOAA Physical Sciences Laboratory</a>, Boulder, Colorado, USA. Fields have been resampled; the simulation is not a NOAA forecast.</li>
+<li>BW, BD and RBTOP use local enhancement curves informed by Dapiya legends. No live satellite imagery is redistributed.</li></ul></main>
+<script type="module">
+import {language} from './i18n.js';
+document.documentElement.lang=language==='zh'?'zh-CN':'en';
+document.querySelector('#zh').hidden=language!=='zh';document.querySelector('#en').hidden=language==='zh';
+if(language==='zh')document.title='数据与许可 · 台风模拟器';
+document.querySelector('#zh > a').href='./?lang=zh';
+</script></html>
