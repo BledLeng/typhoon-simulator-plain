@@ -1,6 +1,6 @@
 # Typhoon Simulator
 
-**English** · [简体中文](README.zh-CN.md)
+**[Play in your browser](https://bledleng.github.io/typhoon-simulator-plain/)** · English · [简体中文](README.zh-CN.md)
 
 Create a disturbance over the ocean, watch it develop, then compare its cloud water, wind radii and infrared signature. This is an offline, browser-based **educational simulation**, not observed weather or a forecast. No API keys, npm setup or proprietary SDK are needed to run it.
 
@@ -59,6 +59,7 @@ The model interpolates 1991–2020 NOAA ERSSTv5 and NCEP/NCAR monthly normals on
 ### Development and license
 
 - The readable application sources are in `dist/`. Run `node --test tests/*.test.mjs` with Node.js 22+; no test dependencies required.
+- The public demo serves only `dist/` from the root of the `gh-pages` branch. To publish a tested update from `main`, a maintainer can run `git subtree push --prefix=dist origin gh-pages`.
 - Rebuild the WebAssembly kernel with `sh tools/build-cloud-kernel.sh` using wasm32-capable Clang and wasm-ld (`CLANG` / `WASM_LD` may override their paths). This uses `native-web/cloud_kernel.c` and the included headers; the original equations and corresponding C/JS implementations are in `physics/` and `dist/`.
 - To rebuild data: see [coastline processing](dist/data/README.md), [climate inputs](tools/build-climate.py), and the terrain scripts in `tools/` (optional dependency `sharp`).
 - Original program: [GNU AGPL v3 only](LICENSE) (`AGPL-3.0-only`). Third-party data retain their upstream terms. See [data credits](dist/credits.html) and [terrain attribution](dist/data/terrain-attribution.md).

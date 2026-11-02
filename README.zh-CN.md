@@ -1,6 +1,6 @@
 # 台风模拟器
 
-[English](README.md) · **简体中文**
+**[在线试玩](https://bledleng.github.io/typhoon-simulator-plain/?lang=zh)** · [English](README.md) · 简体中文
 
 首次打开默认为英语。点右上角 **中文** 可切换，之后会记住选择。也可通过 `?lang=zh` 或 `?lang=en` 指定语言。切换不会重置本局。
 
@@ -55,6 +55,7 @@ python3 tools/serve.py
 ### 开发
 
 - `dist/` 直接包含网页和未压缩的 JS 源码。用 Node.js 22 或更高版本运行 `node --test tests/*.test.mjs`，无需安装依赖。
+- 在线试玩只发布 `dist/` 的内容，由 `gh-pages` 分支根目录提供。维护者在 `main` 测试通过后可执行 `git subtree push --prefix=dist origin gh-pages` 更新线上版本。
 - `native-web/cloud_kernel.c` 和 `physics/*.generated.h` 是预编译 WebAssembly 的构建输入。安装带 wasm32 目标的 Clang 和 wasm-ld 后执行 `sh tools/build-cloud-kernel.sh`；可用 `CLANG` 和 `WASM_LD` 指定路径。
 - `physics/*.flaq` 是风眼、海面和气压方程，同时附有可编辑的 C/JS 实现；构建已提供的 WASM 不需要 FlaqSDK。
 - 原始海岸线的转换方法见[地图数据说明](dist/data/README.md)。重建地形使用 `node tools/build-terrain.mjs` 和 `node tools/build-taiwan-terrain.mjs`，仅此步骤需要 `sharp`（`npm install --no-save --package-lock=false sharp`）。气候格点生成器及其输入见 [build-climate.py](tools/build-climate.py)。
