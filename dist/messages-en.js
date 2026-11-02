@@ -1,6 +1,6 @@
 // Chinese source labels map to English only at the presentation boundary.
 export const english = {
-  "台风模拟器 · 简洁版": "Typhoon Simulator · Plain Edition",
+  "台风模拟器": "Typhoon Simulator",
   "全球气旋教育模拟：连续水汽云水场、地形影响、地中海类热带气旋与全球海盆；非实况或气象预报。": "Explore a simulated global atmosphere, tropical cyclones, terrain and satellite imagery. Not live weather or a forecast.",
   "全球气旋地图": "Global cyclone map",
   "地图。左键拖动平移，单击空白处打开生成菜单，点击气旋只查看数据，Shift 开始手动干预，Escape 结束干预。方向键移动，加减键缩放，Enter 在视野中心生成或查看。": "Map. Drag with the left button to pan. Click empty space to create a system or click a cyclone to inspect it. Shift to steer; Escape to release. Arrow keys pan, plus/minus zoom, Enter inspects or creates at the centre.",
