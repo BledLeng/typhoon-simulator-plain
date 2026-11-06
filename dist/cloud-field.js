@@ -5,7 +5,7 @@ import { WORLD, longitudeDelta, isMediterranean } from './geography.js';
 import { terrainWindFactor, terrainCirculationRadius } from './terrain-interaction.js';
 import { surfaceVaporSupply } from './surface-flux.js';
 import { flaq_marineTarget, flaq_condensation, flaq_reevaporation, flaq_rainbandExchange } from './marine.generated.js';
-import { cloudProductPixels, isCloudProduct } from './cloud-products.js?v=global-39';
+import { cloudProductPixels, isCloudProduct } from './cloud-products.js?v=eye-low-44';
 import { longitudeNoiseAxis, addNoiseRow } from './noise-grid.js';
 import { pressureRange, pressureSurface } from './pressure-field.js';
 import { makeCloudKernel } from './moist-kernel-v2.js';

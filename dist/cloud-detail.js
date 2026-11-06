@@ -1,10 +1,11 @@
-import { MoistAtmosphere } from './cloud-field.js?v=eye-42';
+import { MoistAtmosphere } from './cloud-field.js?v=eye-low-44';
 import { clamp, radiusOfMaximumWind } from './simulation.js?v=eye-42';
 import { longitudeDelta } from './geography.js';
 import { project, unproject } from './map-math.js';
+import {advanceEyeLowCloud} from './eye-low-cloud.js';
 
 const QUANTITIES = ['vapor', 'water', 'temperature', 'cold'];
-const AUXILIARY_QUANTITIES = ['displayPrevious', 'soilWater', 'soilHeat', 'convection'];
+const AUXILIARY_QUANTITIES = ['displayPrevious', 'soilWater', 'soilHeat', 'convection', 'eyeWater', 'eyeVapor'];
 const REGRID_QUANTITIES = [...QUANTITIES, ...AUXILIARY_QUANTITIES];
 const arrivalWeight = (patch, time) => {
   const t = clamp((time - (patch.createdAt ?? time)) / 3, 0, 1);
@@ -99,11 +100,17 @@ export class CloudDetails {
       return map;
     };
     const from = mapping(source), coarse = mapping(parent);
-    if (!boundaryOnly) patch.displayPrevious ||= new Float32Array(patch.n);
+    if (!boundaryOnly) {
+      patch.displayPrevious ||= new Float32Array(patch.n);
+      patch.eyeWater ||= new Float32Array(patch.n);
+      patch.eyeVapor ||= new Float32Array(patch.n);
+    }
     const names = boundaryOnly ? QUANTITIES : REGRID_QUANTITIES;
     const output = names.map(name => patch[name]);
     const channels = field => names.map(name => name === 'displayPrevious'
-      ? field.displayPrevious || (field.time > 0 ? field.next[1] : field.water) : field[name]);
+      ? field.displayPrevious || (field.time > 0 ? field.next[1] : field.water)
+      : field[name] || ((name === 'eyeWater' || name === 'eyeVapor')
+        ? (field.emptyEyeLayer??=new Float32Array(field.n)) : undefined));
     const sourceChannels = channels(source), parentChannels = source === parent ? sourceChannels : channels(parent);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       if (shift && y+shift[1]>=0 && y+shift[1]<h && x===Math.max(0,-shift[0])) {
@@ -211,6 +218,7 @@ export class CloudDetails {
         const dx = dy / Math.cos(latitude * Math.PI / 180);
         const bounds = { west: storm.lon - dx, east: storm.lon + dx, north: Math.min(85, latitude + dy), south: Math.max(-85, latitude - dy) };
         const next = new MoistAtmosphere(parent.seed, 160, 160, null, bounds);
+        next.eyeWater=new Float32Array(next.n);next.eyeVapor=new Float32Array(next.n);
         next.refreshEnvironment(env, parent.time);
         this.seed(next, patch || parent);
         next.time = patch?.time ?? parent.time;
@@ -229,7 +237,9 @@ export class CloudDetails {
       // Presentation follows the centre continuously; image resampling below
       // keeps each parcel in world coordinates instead of dragging a square.
       patch.viewLon = storm.lon; patch.viewLat = storm.lat;
+      const elapsed=parent.time-patch.time;
       this.advancePatch(patch, env, systems, .125);
+      advanceEyeLowCloud(patch,systems,elapsed);
       if (patch.time > 0 && patch.feedbackTime !== parent.time) {
         this.restrictToParent(patch); patch.feedbackTime = parent.time;
       }

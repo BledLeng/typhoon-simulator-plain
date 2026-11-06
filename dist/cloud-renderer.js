@@ -1,14 +1,14 @@
 import {say,t,stormText} from './i18n.js';
-import { MoistAtmosphere, FIELD_BOUNDS } from './cloud-field.js?v=eye-42';
+import { MoistAtmosphere, FIELD_BOUNDS } from './cloud-field.js?v=eye-low-44';
 import { systemLabel, isHighLatitudeSystem, visibleSystem, toKnots, destination } from './simulation.js?v=eye-42';
 import { circulationState, polarBoundary } from './circulation.js';
 import { drawWrappedContour } from './wind-contour.js';
 import { CloudPresentation } from './cloud-presentation.js?v=global-39';
 import { cloudSolutionKey, cloudDispatchInterval } from './cloud-clock.js';
 import { stormRingGeometry } from './wind-rings.js?v=eye-42';
-import { isInfrared } from './satellite-scales.js?v=global-39';
+import { isInfrared } from './satellite-scales.js?v=eye-low-44';
 import { trackLabel } from './storm-identifiers.js';
-import { CpuWorldObserver } from './world-cloud-reference.js?v=eye-42';
+import { CpuWorldObserver } from './world-cloud-reference.js?v=eye-low-44';
 import {solarPosition,TerminatorLine} from './day-night.js?v=global-39';
 
 export class CloudRenderer {
@@ -22,7 +22,7 @@ export class CloudRenderer {
     const width = 640, height = 512;
     const land = makeLandMask(width, height, FIELD_BOUNDS);
     try {
-      this.worker = new Worker(new URL('./cloud-worker.js?v=eye-42', import.meta.url), { type: 'module' });
+      this.worker = new Worker(new URL('./cloud-worker.js?v=eye-low-44', import.meta.url), { type: 'module' });
       this.worker.onmessage = ({ data }) => this.accept(data);
       this.worker.onerror = event => this.fail(event.message);
       this.worker.postMessage({ type: 'init', seed: simulation.seed, width, height, land: land.buffer }, [land.buffer]);

@@ -1,6 +1,6 @@
 // Enhancement curves in °C, read from Dapiya's BW, BD and RBTOP floater
 // legends. These transform simulated brightness temperature, never wind speed.
-export const isInfrared = key => ['infrared','ir-bw','ir-bd','ir-rbtop'].includes(key);
+export const isInfrared = key => ['infrared','ir-bw','ir-bd','ir-rbtop','ir-ott'].includes(key);
 const gray = value => [value,value,value];
 // A map overlay, unlike the opaque full-scene RBTOP product. The warm end
 // fades out; cold thick cloud must not lose contrast against the basemap.
@@ -14,6 +14,18 @@ const rainbow = [[-100,255,255,255],[-90,157,157,157],[-80,59,59,59],[-76,0,0,0]
   [25,4,4,4],[26,0,0,0],[26.1,121,121,121],[50,0,0,0]];
 const convection = [[0,150,150,150],[.18,205,205,205],[.39,242,229,155],
   [.58,255,185,65],[.78,237,89,44],[1,154,27,57]];
+// Dapiya IR-OTT floater legend, sampled at its labelled brightness temperatures
+// (https://www.dapiya.top/satellite/floater/). Jumps at −20, −80 and −90 °C
+// are deliberate. This is a display curve, not an independent cloud field.
+const ottMiddle = [[-80,230,230,230],[-70,0,0,0],[-60,255,0,0],[-50,255,255,0],
+  [-40,0,255,0],[-30,0,0,115],[-20,0,255,255]];
+const ottCold = [[-90,128,0,128],[-80,230,100,188]];
+function ott(t) {
+  if(t<=-90)return gray(255);
+  if(t<=-80)return interpolate(ottCold,t);
+  if(t<=-20)return interpolate(ottMiddle,t);
+  return gray(Math.round(Math.max(0,Math.min(200,(28-t)*200/48))));
+}
 function interpolate(stops,x,channels=3) {
   let i=1;
   while(i<stops.length-1 && x>stops[i][0]) i++;
@@ -33,6 +45,7 @@ function bd(t) {
   return Math.round(Math.max(0,255-(t-9)*13.6));
 }
 export function scaleColor(key,x) {
+  if(key==='ir-ott') return ott(x);
   if(key==='ir-bd') return gray(bd(x));
   if(key==='ir-bw') return gray(Math.round(255*Math.max(0,Math.min(1,(50-x)/135))));
   return interpolate(key==='convection'?convection:key==='ir-rbtop'?rainbow:red,x);

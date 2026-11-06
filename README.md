@@ -58,6 +58,10 @@ The model interpolates 1991–2020 NOAA ERSSTv5 and NCEP/NCAR monthly normals on
 
 **Timing and limits.** Storm motion advances in steps of at most five simulated minutes. The cloud worker exchanges half-hour solutions; the display can blend completed frames at up to 24 Hz. Selecting 24 h/s requests 48 cloud updates per real second. If the device cannot sustain that, the clock slows rather than letting the wind track outrun the cloud field. The worker can use a WebAssembly moisture kernel or its JavaScript reference; cloud rendering separately has WebGL2 and CPU paths. Zooming in does not add measured data: the eye, terrain wake and infrared temperatures are model estimates, not observations. [Clock](dist/cloud-clock.js) · [Worker](dist/cloud-worker.js) · [Cloud presentation](dist/cloud-presentation.js)
 
+**Thin clouds inside the eye.** A separate, shallow marine layer transports water vapour and condensate beneath the eye inversion. Exchange with the sea, condensation, evaporation and drizzle let irregular patches form, move and dissipate; dry eyes are not forced to fill. It shares the moving numerical mesh, not a screen-space stamp. Visible imagery composites it beneath the high cloud; infrared mixes its relatively warm radiance with the sea and the overlying cloud. Nighttime differences do not mean that half the satellite scan is missing. This is a reduced-order parameterisation, not a resolved three-dimensional boundary layer. [Implementation](dist/eye-low-cloud.js) · [NOAA eye-cloud observations](https://repository.library.noaa.gov/view/noaa/66302/noaa_66302_DS1.pdf)
+
+Cloud-water shading now uses cloud-height estimates to cast short, soft shadows. The day/night view follows solar direction; ordinary cloud water retains a fixed presentation light. IR-OTT is also available alongside BW, BD and RBTOP. These products all observe the same simulated cloud field; changing layers never advances the physical clock.
+
 ### Development and license
 
 - The readable application sources are in `dist/`. Run `node --test tests/*.test.mjs` with Node.js 22+; no test dependencies required.
