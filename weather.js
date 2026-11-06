@@ -1,16 +1,16 @@
 import {bindMarkup, say, t, stormText, eventText} from './i18n.js';
 import { Simulation, systemLabel, regionalGrade, gradeNote, isHighLatitudeSystem, visibleSystem, toKnots, pacificLongitude, windRadii } from './simulation.js?v=eye-42';
-import { CloudRenderer } from './cloud-renderer.js?v=eye-42';
+import { CloudRenderer } from './cloud-renderer.js?v=eye-low-44';
 import { formatCoordinate } from './map-math.js';
 import { eyeStructureDetails } from './eye-morphology.js?v=eye-42';
 import { EnvironmentEditor } from './environment-editor.js?v=eye-42';
 import { PopupMenu } from './popup-menu.js';
-import { MAP_LAYERS, INITIAL_RADIUS, radiusFromPosition, positionFromRadius, spawnOptions, nextTimeRate } from './weather-options.js?v=global-39';
+import { MAP_LAYERS, INITIAL_RADIUS, radiusFromPosition, positionFromRadius, spawnOptions, nextTimeRate } from './weather-options.js?v=eye-low-44';
 import { pressureRange } from './pressure-field.js';
 import { circulationRadius } from './wind-rings.js?v=eye-42';
 import { trackLabel } from './storm-identifiers.js';
 import { SimulationClock } from './cloud-clock.js';
-import { isInfrared, scaleRGBA } from './satellite-scales.js?v=global-39';
+import { isInfrared, scaleRGBA } from './satellite-scales.js?v=eye-low-44';
 
 export class WeatherSandbox {
   constructor({ canvas, screenPoint, locate, follow, invalidate, isLand, elevation, makeLandMask }) {

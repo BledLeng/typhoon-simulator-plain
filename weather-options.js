@@ -1,7 +1,8 @@
 // Display choices and initial-condition validation; no changes to the solver.
 export const MAP_LAYERS = Object.freeze([
   ['cloud', '云水'], ['day-night', '昼夜'], ['convection', '对流云图'], ['ir-bw', '红外 · BW 灰阶'],
-  ['ir-bd', '红外 · BD 分段增强'], ['ir-rbtop', '红外 · RBTOP 彩色增强'], ['infrared', '红外 · 冷云深红'],
+  ['ir-bd', '红外 · BD 分段增强'], ['ir-rbtop', '红外 · RBTOP 彩色增强'],
+  ['ir-ott', '红外 · OTT 冷云增强'], ['infrared', '红外 · 冷云深红'],
   ['sst', '海温 12—32°C'], ['ohc', '热含量 0—140 kJ/cm²'], ['cooling', '冷尾迹降温 0—6°C'],
   ['shear', '风切变 0—40 m/s'], ['humidity', '湿度 25—100%'],
   ['temperature', '气温 0—35°C'], ['pressure', '气压（含气旋与高压）'],

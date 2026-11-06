@@ -1,8 +1,9 @@
 // One global satellite observation mesh, including clear air. A cyclone can
 // force wind/ascent in this mesh, but it cannot supply an image or erase a tile.
 import {radiusOfMaximumWind} from './simulation.js?v=eye-42';
-import {scaleRGBA} from './satellite-scales.js?v=global-39';
+import {scaleRGBA} from './satellite-scales.js?v=eye-low-44';
 import {solarPosition,TWILIGHT_SINE} from './day-night.js?v=global-39';
+import {cloudShadowGLSL,studioLightGLSL} from './cloud-shadow.js';
 import {random} from './simulation.js?v=eye-42';
 
 const vertex=`#version 300 es
@@ -95,7 +96,7 @@ void main(){
  // unresolved shear inside roughly two parent cells, and low-level inflow.
  float gain=1.-smoothstep(.6*rm,max(2.*rm,120.),r);
  vec2 vel=v*gain*(dn-.15*unit);
- float fineWater=0.;
+ float fineWater=0.,lowWater=0.;
  vec2 location=vec2(fract(uv.x),uv.y);
  vec4 ambient=texture(field,location),motion=texture(wind,location);
  float q=r/rm,band=0.;
@@ -113,6 +114,7 @@ void main(){
    float edge=max(abs(q.x-.5),abs(q.y-.5))*2.;
    if(edge<1.){
      vec2 column=texture(columns,q).rg;
+     lowWater=max(0.,column.y)*(1.-smoothstep(.65,1.,edge));
      // Only the sub-footprint departure; a uniformly dry nest contributes
      // zero. Never replace the background with a rectangular cloud picture.
      vec2 dd=clamp(vec2(38.)/(footprint.zw*metric/cosh(worldTop+host.y*worldSpan)),vec2(.012),vec2(.22));
@@ -129,33 +131,31 @@ void main(){
    }
  }
  float drying=state.w*(1.-.7*max(0.,band))*1.15*exp(-pow(r/max(5.,rm*.80),2.));
- outp=deviations==1?vec4(fineWater,0.,0.,1.):vec4(vel,ascent,drying);
+ outp=deviations==1?vec4(fineWater,lowWater,0.,1.):vec4(vel,ascent,drying);
 }`;
 const display=head+`
 uniform int product;
 uniform vec3 solar; // subsolar longitude, sin(declination), cos(declination)
 uniform sampler2D deviationsMap;
-float waterAt(vec2 p){return max(0.,texture(history,p).r+texture(deviationsMap,p).r);}
+${cloudShadowGLSL}
 float rad(float t){return 1./(exp(1396.87/(t+273.15))-1.);}
 void main(){
  // GL canvas is presented top down; solver row zero is north.
  vec2 p=vec2(uv.x,1.-uv.y);
- vec2 s=texture(history,p).rg;vec4 b=texture(field,p);
- float w=waterAt(p),c=max(s.y,0.),a=1.-exp(-2.6*w);
+ vec2 s=columnAt(p);vec4 b=texture(field,p);
+ float w=s.x,c=max(s.y,0.),a=1.-exp(-2.6*w);
  float merc=worldTop+p.y*worldSpan;
+ float sl=-tanh(merc),cs=1./cosh(merc);
+ vec3 sun=${studioLightGLSL};
  float day=1.;
  if(product==4){
-   float mu=-tanh(merc)*solar.y+cos((p.x-.5)*6.28318530718-solar.x)*solar.z/cosh(merc);
-   day=smoothstep(-${TWILIGHT_SINE},${TWILIGHT_SINE},mu);
+   float ha=(p.x-.5)*6.28318530718-solar.x,cosH=cos(ha)*solar.z;
+   sun=vec3(-sin(ha)*solar.z,sl*cosH-cs*solar.y,sl*solar.y+cs*cosH);
+   day=smoothstep(-${TWILIGHT_SINE},${TWILIGHT_SINE},sun.z);
  }
  vec4 visible=vec4(0.);
  if(product==0||(product==4&&day>0.)){
-   vec2 cell=1./vec2(textureSize(history,0));float cs=1./cosh(worldTop+p.y*worldSpan);
-   float dx=(waterAt(p-vec2(cell.x,0))-waterAt(p+vec2(cell.x,0)))*60./(cell.x*metric.x*cs);
-   float dy=(waterAt(p-vec2(0,cell.y))-waterAt(p+vec2(0,cell.y)))*60./(cell.y*metric.y*cs);
-   vec2 n=clamp(vec2(dx,dy),-.65,.65);
-   float light=(222.+34.*max(0.,(.7-dot(n,vec2(.45,.55)))/sqrt(1.+dot(n,n))))/255.;
-   visible=vec4(clamp(vec3(light)+vec3(0.,3.,6.)/255.,0.,1.)*a,a);
+   visible=visibleCloud(p,s,sun,metric*cs,17.-6.*abs(sl),a);
    if(product==0||day>=1.){outp=visible;return;}
  }
  float e=1.-exp(-2.8*w),act=c/(c+.045);
@@ -164,7 +164,10 @@ void main(){
  else{
    float trop=17.-6.*abs(tanh(worldTop+p.y*worldSpan));
    float top=max(-90.,min(b.a,b.b-6.2*min(trop,1.2+3.*w/(w+.6)+act*(trop-3.))));
-   float mixed=mix(rad(b.a),rad(top),e);
+   float low=max(0.,texture(deviationsMap,p).g),le=1.-exp(-2.8*low);
+   float lowTop=b.a-6.2*(.45+.95*low/(low+.08));
+   float mixed=mix(mix(rad(b.a),rad(lowTop),le),rad(top),e);
+   e=1.-(1.-e)*(1.-le);
    float tb=1396.87/log(1.+1./mixed)-273.15;
    if(product==4){
      float cold=clamp((20.-tb)/100.,0.,1.);
@@ -224,14 +227,15 @@ export class WorldCloudObserver {
      if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw Error('Incomplete world field');
      return {texture,fb};};
    this.field=make(f.width,f.height,gl.RGBA16F,true);this.previousField=make(f.width,f.height,gl.RGBA16F,true);this.wind=make(f.width,f.height,gl.RGBA16F,true);
-   this.a=target(gl.RG16F);this.b=target(gl.RG16F);this.predicted=target(gl.RG16F);this.forces=target(gl.RGBA16F);this.deviations=target(gl.R16F);
+   this.a=target(gl.RG16F);this.b=target(gl.RG16F);this.predicted=target(gl.RG16F);this.forces=target(gl.RGBA16F);this.deviations=target(gl.RG16F);
    this.fieldData=new Float32Array(f.n*4);this.windData=new Float32Array(f.n*4);
    this.noise=make(256,256,gl.R8,true);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
    const rng=random(f.seed^0x691c99);gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,256,256,gl.RED,gl.UNSIGNED_BYTE,Uint8Array.from({length:65536},()=>rng()*256));
    const atlas=target(gl.R16F);
    this.texture(3,this.noise); this.use(4); gl.viewport(0,0,this.width,this.height); this.draw();
    gl.deleteFramebuffer(atlas.fb); gl.deleteTexture(this.noise); this.noise=atlas.texture;
-   this.columns=make(160,160,gl.R16F);this.palette=make(1024,1,gl.RGBA8);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+   this.columnData=new Float32Array(160*160*2);
+   this.columns=make(160,160,gl.RG16F);this.palette=make(1024,1,gl.RGBA8);gl.bindFramebuffer(gl.FRAMEBUFFER,null);
  }
  texture(i,t){const g=this.gl;g.activeTexture(g.TEXTURE0+i);g.bindTexture(g.TEXTURE_2D,t);}
  use(i){const {p,u}=this.programs[i];this.gl.useProgram(p);this.gl.uniform4f(u.box,0,0,1,1);return u;}
@@ -263,7 +267,8 @@ export class WorldCloudObserver {
      if(nest){
        const x0=f.point(nest.bounds.west,nest.bounds.north),spanX=(nest.bounds.east-nest.bounds.west)/360,spanY=(nest.bottom-nest.top)/(f.bottom-f.top);
        g.uniform4f(v.footprint,(x0.x+.5)/f.width+spanX*.5,(x0.y+.5)/f.height+spanY*.5,spanX,spanY);
-       g.texSubImage2D(g.TEXTURE_2D,0,0,0,nest.width,nest.height,g.RED,g.FLOAT,nest.water);
+       for(let i=0;i<nest.n;i++){this.columnData[2*i]=nest.water[i];this.columnData[2*i+1]=nest.eyeWater?.[i]||0;}
+       g.texSubImage2D(g.TEXTURE_2D,0,0,0,nest.width,nest.height,g.RG,g.FLOAT,this.columnData);
      }else g.uniform4f(v.footprint,0,0,0,0);
      g.uniform4f(v.host,x,y,r,rm);g.uniform4f(v.state,s.wind*3.6,Math.sign(s.lat)||1,s.organization||0,s.eye||0);
      const c=s.eyewallCycle;

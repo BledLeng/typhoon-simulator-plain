@@ -1,6 +1,7 @@
 // Diagnostic products share one simulated atmosphere, not observed satellite data.
-import { isInfrared, scaleRGBA } from './satellite-scales.js?v=global-39';
+import { isInfrared, scaleRGBA } from './satellite-scales.js?v=eye-low-44';
 import {solarPosition,daylight} from './day-night.js?v=global-39';
+import {lowCloudHeight} from './eye-low-cloud.js';
 export const isCloudProduct = layer => layer === 'cloud' || layer === 'day-night' || layer === 'convection' || isInfrared(layer);
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 
@@ -42,6 +43,12 @@ const topOf = (water, activity, tropopause, temperature, surface) =>
     1.2 + 3 * water / (water + .6) + activity * (tropopause - 3))));
 const emissivityOf = water => -Math.expm1(-water * 2.8);
 const surfaceOf = (field,i) => field.land[i] ? field.soilHeat[i] : field.envFields.sst[i] - field.seaCooling[i];
+function lowerRadiance(field,i,surface){
+  const low=Math.max(0,field.eyeWater?.[i]||0);
+  if(!low)return radianceSample(surface);
+  const e=emissivityOf(low),top=surface-6.2*lowCloudHeight(low);
+  return radianceSample(surface)*(1-e)+radianceSample(top)*e;
+}
 export function cloudDiagnostic(field,i,tropopauseKm) {
   const water = Math.max(0,field.water[i]), activity = activityOf(field.convection[i]), surface = surfaceOf(field,i);
   return {activity,surface,top:topOf(water,activity,tropopauseKm,field.temperature[i],surface),emissivity:emissivityOf(water)};
@@ -63,9 +70,10 @@ export function cloudProductPixels(field,layer) {
         pixels[k+3] = 255*e*(.35+.65*activity);
       } else {
         const surface=surfaceOf(field,i), top=topOf(water,activity,tropopause,field.temperature[i],surface);
-        const mixed=radianceSample(surface)*(1-e)+radianceSample(top)*e;
+        const mixed=lowerRadiance(field,i,surface)*(1-e)+radianceSample(top)*e;
         color=Math.round(clamp(mixed/maxRadiance,0,1)*16383)*4;
-        pixels[k+3]=overlay ? e*colors[color+3] : 255;
+        const low=emissivityOf(Math.max(0,field.eyeWater?.[i]||0));
+        pixels[k+3]=overlay ? (e+low*(1-e))*colors[color+3] : 255;
       }
       pixels[k]=colors[color]; pixels[k+1]=colors[color+1]; pixels[k+2]=colors[color+2];
     }
@@ -76,8 +84,8 @@ export function cloudProductPixels(field,layer) {
 // CPU fallback. Day is the existing visible-cloud observation; night uses
 // 10.3 µm radiance and cloud emissivity, NOT the visible image dyed blue.
 // Mix premultiplied endpoints so clear-day alpha exposes the unmodified map.
-function dayNightPixels(field){
-  const {width,height}=field, pixels=field.pixels('cloud',1,field.water);
+export function dayNightPixels(field,pixels=field.pixels('cloud',1,field.water)){
+  const {width,height}=field;
   const sun=solarPosition(field.time,field.seasonDay), bw=displayTable('ir-bw');
   const hourCos=Float64Array.from(field.lon,lon=>Math.cos(lon*Math.PI/180-sun.lon));
   for(let y=0;y<height;y++){
@@ -86,9 +94,10 @@ function dayNightPixels(field){
     for(let x=0,i=y*width;x<width;x++,i++){
       const d=daylight(base+amp*hourCos[x]);
       if(d===1)continue;
-      const water=Math.max(0,field.water[i]), e=emissivityOf(water),surface=surfaceOf(field,i);
+      const water=Math.max(0,field.water[i]), high=emissivityOf(water),surface=surfaceOf(field,i);
+      const low=emissivityOf(Math.max(0,field.eyeWater?.[i]||0)), e=high+low*(1-high);
       const top=topOf(water,activityOf(field.convection[i]),trop,field.temperature[i],surface);
-      const mixed=radianceSample(surface)*(1-e)+radianceSample(top)*e;
+      const mixed=lowerRadiance(field,i,surface)*(1-high)+radianceSample(top)*high;
       const gray=bw[4*Math.round(clamp(mixed/maxRadiance,0,1)*16383)]/255;
       const cold=clamp(1.35*gray-.30,0,1), cloud=e*(.35+.65*cold), clear=.82*(1-cloud);
       const k=4*i,lit=d*pixels[k+3]/255,dark=1-d,alpha=lit+dark*(cloud+clear);

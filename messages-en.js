@@ -111,6 +111,7 @@ export const english = {
   "红外 · BW 灰阶": "Infrared · BW grayscale",
   "红外 · BD 分段增强": "Infrared · BD enhancement",
   "红外 · RBTOP 彩色增强": "Infrared · RBTOP enhancement",
+  "红外 · OTT 冷云增强": "Infrared · OTT cold-cloud enhancement",
   "红外 · 冷云深红": "Infrared · cold cloud tops",
   "海温 12—32°C": "Sea temperature · 12–32°C",
   "热含量 0—140 kJ/cm²": "Ocean heat · 0–140 kJ/cm²",

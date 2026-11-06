@@ -1,19 +1,22 @@
 // Portable, uniform-grid observer for browsers without half-float render
 // targets. No dependence on DOM, camera, selected storm or fine-mesh windows.
-import {MoistAtmosphere} from './cloud-field.js?v=eye-42';
+import {MoistAtmosphere} from './cloud-field.js?v=eye-low-44';
 import {radiusOfMaximumWind, smooth} from './simulation.js?v=eye-42';
 import {unproject} from './map-math.js';
 import {bandAnomaly} from './eye-morphology.js?v=eye-42';
 import {longitudeNoiseAxis,addNoiseRow} from './noise-grid.js';
+import {visiblePixels} from './cloud-shadow.js';
+import {dayNightPixels} from './cloud-products.js?v=eye-low-44';
 const clip=(x,a,b)=>Math.max(a,Math.min(b,x));
 const mix=(v,i,j,k,l,a,b,c,d)=>a*v[i]+b*v[j]+c*v[k]+d*v[l];
 
 export class CpuWorldObserver{
  constructor(f,factor=2){
+   this.lightCache={};
    const w=this.width=f.width*factor,h=this.height=f.height*factor,n=w*h;this.factor=factor;
    const view=this.view=Object.create(MoistAtmosphere.prototype);
    Object.assign(view,{n,width:w,height:h,periodic:true,time:0,envFields:{sst:new Float32Array(n)},land:new Uint8Array(n),
-     seaCooling:new Float32Array(n),temperature:new Float32Array(n),water:new Float32Array(n),convection:new Float32Array(n)});
+     seaCooling:new Float32Array(n),temperature:new Float32Array(n),water:new Float32Array(n),convection:new Float32Array(n),eyeWater:new Float32Array(n)});
    view.lat=Float32Array.from({length:h},(_,y)=>unproject(0,f.top+(y+.5)/h*(f.bottom-f.top)).latitude);
    view.kmx=Float32Array.from(view.lat,lat=>40030*Math.cos(lat*Math.PI/180)/w);
    view.kmy=Float32Array.from(view.lat,lat=>(f.bottom-f.top)*6371*Math.cos(lat*Math.PI/180)/h);
@@ -40,6 +43,7 @@ export class CpuWorldObserver{
    const v=this.view,w=this.width,h=this.height;
    const [u,north,rise,dry]=this.forcing;
    for(const a of this.forcing)a.fill(0);
+   v.eyeWater.fill(0);
    for(const s of systems){
      if(s.kind==='cloud'||s.kind==='anticyclone'||s.wind<7)continue;
      const nest=meshes?.get(s.id);
@@ -64,7 +68,11 @@ export class CpuWorldObserver{
        if(nest){
          const n=nest.point(this.lons[((x%w+w)%w)],v.lat[y]);
          const edge=Math.max(Math.abs((n.x+.5)/nest.width-.5),Math.abs((n.y+.5)/nest.height-.5))*2;
-         if(edge<1)rise[i]+=.42*Math.max(0,nest.sample(nest.water,n.x,n.y)-f.sample(f.water,px,py))*(1-smooth(.65,1,edge))*(1-smooth(.55*R,R,r));
+         if(edge<1){
+           const overlap=1-smooth(.65,1,edge);
+           rise[i]+=.42*Math.max(0,nest.sample(nest.water,n.x,n.y)-f.sample(f.water,px,py))*overlap*(1-smooth(.55*R,R,r));
+           if(nest.eyeWater)v.eyeWater[i]+=Math.max(0,nest.sample(nest.eyeWater,n.x,n.y))*overlap;
+         }
        }
        dry[i]+=(s.eye||0)*(1-.7*Math.max(0,band))*1.15*Math.exp(-((r/Math.max(5,rm*.80))**2));
      }
@@ -112,8 +120,12 @@ export class CpuWorldObserver{
      }
    }
    v.water=water;this.previous=old;v.convection=activity;this.previousActivity=prior;
-   v.time=time;v.lightTime=-Infinity;this.lastBase.set(f.water);
+   v.time=time;v.lightTime=-Infinity;this.lightCache.water=null;this.lastBase.set(f.water);
    this.time=time;this.injection=f.injectionRevision;this.env=f.envRevision;
  }
- pixels(layer){return this.view.pixels(layer,1,this.view.water);}
+ pixels(layer){
+   if(layer==='cloud')return visiblePixels(this.view,false,this.lightCache);
+   if(layer==='day-night')return dayNightPixels(this.view,visiblePixels(this.view,true,this.lightCache));
+   return this.view.pixels(layer,1,this.view.water);
+ }
 }
